@@ -59,7 +59,7 @@ def ttf2ufo(ttf_fps, ufo_fp):
             font = defcon.Font()
             extractor.extractUFO(ttf, font)
             font.save(ufo)
-        except extractor.ExtractorError:
+        except extractor.exceptions.ExtractorError:
             with nostdout():
                 print(f"ExtractorError: Unable to read {str(ttf)}")
         except UFOLibError:

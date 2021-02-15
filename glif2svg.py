@@ -153,6 +153,12 @@ def to_path(glif, x_scale=1, y_scale=1, x_offset=0, y_offset=0, glif_dict=None):
 def write_to_svg(contours, svg, size=128):
     """Write contours to SVG file."""
 
+    if not len(contours):
+        template = f"""<svg width="{size}" height="{size}" xmlns="http://www.w3.org/2000/svg"></svg>"""
+        with open(svg, "w") as file:
+            file.write(template)
+        return ''
+
     # Get min and max for calibrating coordinates
     # so we don't get negative values and also
     # for setting canvas size in SVG

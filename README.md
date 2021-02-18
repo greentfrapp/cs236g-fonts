@@ -19,3 +19,11 @@ You can run the following command to convert the files:
 ```
 $ python3 preprocess_fonts.py
 ```
+
+## References
+
+[https://bair.berkeley.edu/blog/2018/03/13/mcgan/](https://bair.berkeley.edu/blog/2018/03/13/mcgan/)
+
+[https://people.csail.mit.edu/tzumao/diffvg/](https://people.csail.mit.edu/tzumao/diffvg/)
+
+

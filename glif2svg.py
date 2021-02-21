@@ -107,7 +107,8 @@ def fill_oncurve_points(contours):
                     )
                     filled_points.append(p_a)
                     filled_points.append(implied)
-                filled_points.append(offcurves[-1])
+                if len(offcurves):
+                    filled_points.append(offcurves[-1])
                 filled_points.append(p)
                 offcurves = []
             elif p.type == "curve":
@@ -134,15 +135,16 @@ def to_path(glif, x_scale=1, y_scale=1, x_offset=0, y_offset=0, glif_dict=None):
         try:
             if glif_dict is None:
                 glif_file = glif.parents[0] / f"{component['base']}.glif"
-            else:
+            elif component['base'] in glif_dict:
                 glif_file = glif_dict.get(component['base'])
-            paths += to_path(
-                glif_file,
-                x_scale=float(component.get("xScale", 1)),
-                y_scale=float(component.get("yScale", 1)),
-                x_offset=float(component.get("xOffset", 0)),
-                y_offset=float(component.get("yOffset", 0)),
-            )
+                paths += to_path(
+                    glif_file,
+                    x_scale=float(component.get("xScale", 1)),
+                    y_scale=float(component.get("yScale", 1)),
+                    x_offset=float(component.get("xOffset", 0)),
+                    y_offset=float(component.get("yOffset", 0)),
+                    glif_dict=glif_dict,
+                )
         except FileNotFoundError:
             print(f"'{glif}' refers to unfound component '{component['base']}'")
     contours = read_contours(glif, x_scale, y_scale, x_offset, y_offset)
@@ -154,10 +156,7 @@ def write_to_svg(contours, svg, size=128):
     """Write contours to SVG file."""
 
     if not len(contours):
-        template = f"""<svg width="{size}" height="{size}" xmlns="http://www.w3.org/2000/svg"></svg>"""
-        with open(svg, "w") as file:
-            file.write(template)
-        return ''
+        raise ValueError("Empty contours list")
 
     # Get min and max for calibrating coordinates
     # so we don't get negative values and also
@@ -178,6 +177,10 @@ def write_to_svg(contours, svg, size=128):
     scale = size / max(max_x, max_y)
     max_x = int(scale * max_x)
     max_y = int(scale * max_y)
+
+    if max_x == 0 or max_y == 0:
+        raise ValueError(f"Width/height of zero, given max_x = {max_x} and max_y = {max_y}")
+
     [[p.scale(scale) for p in points] for points in contours]
 
     segments = []

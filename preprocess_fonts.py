@@ -4,14 +4,15 @@ import extractor
 from fontTools.ufoLib.errors import UFOLibError
 import numpy as np
 import io
+import os
 import sys
 from pathlib import Path
 from PIL import Image
 from tqdm import tqdm
 import contextlib
 
-from glif2svg import to_path, fill_oncurve_points, write_to_svg
-
+from glif2svg import build_glif_dict, to_path, fill_oncurve_points, write_to_svg
+from glyphs import GLYPHS
 
 class DummyFile(object):
     file = None
@@ -34,7 +35,10 @@ def nostdout():
 
 def svg2binmap(path="o.svg", size=128):
     """Converts SVG to a binary image."""
-    bs = cairosvg.svg2png(url=path)
+    f = open(path, 'r')
+    if not f.read(): return None
+    bs = cairosvg.svg2png(file_obj=f)
+    f.close()
     # Get alpha channel of RGBA or last channel of RGB
     img_np = np.array(Image.open(io.BytesIO(bs)).split()[-1])
     if np.max(img_np) == 0:
@@ -56,6 +60,7 @@ def ttf2ufo(ttf_fps, ufo_fp):
         try:
             ufo = ufo_fp / (ttf.stem + ".ufo")
             ufos.append(ufo)
+            if ufo.exists(): continue
             font = defcon.Font()
             extractor.extractUFO(ttf, font)
             font.save(ufo)
@@ -68,29 +73,67 @@ def ttf2ufo(ttf_fps, ufo_fp):
     return ufos
 
 
-def ufo2svg(ufo_fps, svg_fp):
+def ufo2svg(ufo_fps, svg_fp, delete_if_error=True):
     svg_fp.mkdir(parents=True, exist_ok=True)
     svgs = []
-    for ufo in tqdm(ufo_fps):
+    for ufo in tqdm(ufo_fps, file=sys.stdout):
         svg = svg_fp / ufo.stem
         svgs.append(svg)
         svg.mkdir(parents=True, exist_ok=True)
-        for glif in (ufo / "glyphs").glob("*.glif"):
-            contours = to_path(glif)
-            write_to_svg(contours, svg / (glif.stem + ".svg"))
+        glif_dict = build_glif_dict(ufo / "glyphs")
+        # for glif in (ufo / "glyphs").glob("*.glif"):
+        for glyph in GLYPHS:
+            glif = Path(ufo / "glyphs" / (glyph + ".glif"))
+            if not glif.exists():
+                with nostdout():
+                    print(f"{str(glif)} not found")
+                continue
+            if (svg / (glif.stem + ".svg")).exists(): continue
+            contours = to_path(glif, glif_dict=glif_dict)
+            try:
+                write_to_svg(contours, svg / (glif.stem + ".svg"))
+            except ValueError as e:
+                with nostdout():
+                    print(f"ValueError: Unable to convert {str(glif)} with error: {e}")
+                    if delete_if_error:
+                        os.remove(str(glif))
+                        try:
+                            os.remove(str(svg / (glif.stem + ".svg")))
+                        except FileNotFoundError:
+                            pass
+                        print(f"Deleted {str(glif)}")
     return svgs
 
 
-def svg2jpg(svg_fps, jpg_fp):
+def svg2jpg(svg_fps, jpg_fp, delete_if_error=True):
     jpg_fp.mkdir(parents=True, exist_ok=True)
     jpgs = []
-    for svg in tqdm(svg_fps):
+    for svg in tqdm(svg_fps, file=sys.stdout):
         jpg = jpg_fp / svg.stem
         jpgs.append(jpg)
         jpg.mkdir(parents=True, exist_ok=True)
-        for glif in svg.glob("*.svg"):
-            img_np = svg2binmap(str(glif), size=128)
-            Image.fromarray(img_np * 255).save(jpg / (glif.stem + ".jpg"))
+        # for glif in svg.glob("*.svg"):
+        for glyph in GLYPHS:
+            glif = Path(svg / (glyph + ".svg"))
+            if not glif.exists():
+                with nostdout():
+                    print(f"{str(glif)} not found")
+                continue
+            if (jpg / (glif.stem + ".jpg")).exists(): continue
+            try:
+                img_np = svg2binmap(str(glif), size=128)
+                if img_np is not None:
+                    Image.fromarray(img_np * 255).save(jpg / (glif.stem + ".jpg"))
+            except ValueError as e:
+                with nostdout():
+                    print(f"ValueError: Unable to read {str(glif)} with error: {e}")
+                    if delete_if_error:
+                        os.remove(str(glif))
+                        try:
+                            os.remove(str(jpg / (glif.stem + ".jpg")))
+                        except FileNotFoundError:
+                            pass
+                        print(f"Deleted {str(glif)}")
 
 
 def main(ttf_fp, output="./data"):
@@ -106,11 +149,6 @@ def main(ttf_fp, output="./data"):
     ufos = ttf2ufo(ttfs, output / "ufo")
     svgs = ufo2svg(ufos, output / "svg")
     svg2jpg(svgs, output / "jpg")
-
-    """
-    ttf_fp = fonts-master/ofl/abeezee/ABeeZee-Regular.ttf
-    output_fp = data/ufo
-    """
 
 
 if __name__ == "__main__":

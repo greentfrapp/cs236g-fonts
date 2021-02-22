@@ -1,7 +1,7 @@
 fonts-master/
 data/
 *.zip
-valid_fonts.*
+valid_fonts*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -15,7 +15,7 @@ class FontDataset(Dataset):
     def __init__(self, path, fonts=None, mask_n=42):
         self.path = Path(path)
         self.fonts = fonts
-        if self.fonts is None
+        if self.fonts is None:
             self.fonts = []
             for font in self.path.glob('*/'):
                 if font.is_dir():

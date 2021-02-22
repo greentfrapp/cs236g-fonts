@@ -32,7 +32,7 @@ def train(gen, dis, train_x_loader, train_y_loader, epoch, lr=0.001):
     dis_optimizer = torch.optim.Adam(dis.parameters(), lr=lr)
     gen_optimizer = torch.optim.Adam(gen.parameters(), lr=lr)
     start_time = time.time()
-    for batch, (batch_x, batch_y) in enumerate(zip(train_x_loader, train_y_loader), start=1):
+    for batch, (batch_x, batch_y) in tqdm(enumerate(zip(train_x_loader, train_y_loader), start=1)):
 
         source = batch_x['source'].to(device)
         target = batch_x['target'].to(device)

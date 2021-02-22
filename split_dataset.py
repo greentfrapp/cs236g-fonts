@@ -1,12 +1,15 @@
 from pathlib import Path
 import numpy as np
+from glyphs import ALPHABETS
 
 
 jpgs = Path('data/jpg')
 valid_fonts = []
 
 for font in jpgs.glob('*/'):
-    if len(list(font.glob('*.jpg'))) >= 52:
+    available_glyphs = list(font.glob('*.jpg'))
+    available_glyphs = [g.stem for g in available_glyphs]
+    if all([g in available_glyphs for g in ALPHABETS]):
         valid_fonts.append(font.name)
 
 train_size = int(0.9 * len(valid_fonts))

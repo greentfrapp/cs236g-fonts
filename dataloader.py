@@ -45,7 +45,7 @@ class FontDataset(Dataset):
         return len(self.fonts)
 
 
-def get_dataloaders(train_path, val_path, train_fonts=None, val_fonts=None, batch_size, mask_n=42):
+def get_dataloaders(train_path, val_path, train_fonts=None, val_fonts=None, batch_size=32, mask_n=42):
     log = util.get_logger('save', 'log_train')
     log.info("Preparing Training Data...")
     train_dataset_x = FontDataset(train_path, fonts=train_fonts, mask_n=mask_n)

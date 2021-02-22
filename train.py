@@ -77,15 +77,16 @@ def train(gen, dis, train_x_loader, train_y_loader, epoch, lr=0.001):
         
         if (batch % display_interval == 0 or batch == EPOCH_SIZE):
             for i in range(len(source)):
-                util.save_image_grid(f'images/train/epoch{batch}_source_{i}.jpg', source[i, :, :, :].detach().cpu().numpy()*255)
-                util.save_image_grid(f'images/train/epoch{batch}_target_{i}.jpg', target[i, :, :, :].detach().cpu().numpy()*255)
-                util.save_image_grid(f'images/train/epoch{batch}_fake_{i}.jpg', torch.round(gen_output_t[i, :, :, :]).detach().cpu().numpy()*255)
+                util.save_image_grid(f'images/train/epoch{epoch}_source_{i}.jpg', source[i, :, :, :].detach().cpu().numpy()*255)
+                util.save_image_grid(f'images/train/epoch{epoch}_target_{i}.jpg', target[i, :, :, :].detach().cpu().numpy()*255)
+                util.save_image_grid(f'images/train/epoch{epoch}_fake_{i}.jpg', torch.round(gen_output_t[i, :, :, :]).detach().cpu().numpy()*255)
 
 
-def eval(gen, val_loader):
+def eval(gen, val_loader, epoch):
     log.info("Evaluating...")
     gen.eval()
     gen_loss = []
+    criterion = nn.BCELoss()
     for batch_x in tqdm(val_loader):
         source = batch_x['source'].to(device)
         target = batch_x['target'].to(device)
@@ -93,9 +94,9 @@ def eval(gen, val_loader):
     gen_loss.append(criterion(gen_output_t, target).item())
     gen.train()
     for i in range(len(source)):
-        util.save_image_grid(f'images/eval/epoch{batch}_source_{i}.jpg', source[i, :, :, :].detach().cpu().numpy()*255)
-        util.save_image_grid(f'images/eval/epoch{batch}_target_{i}.jpg', target[i, :, :, :].detach().cpu().numpy()*255)
-        util.save_image_grid(f'images/eval/epoch{batch}_fake_{i}.jpg', torch.round(gen_output_t[i, :, :, :]).detach().cpu().numpy()*255)
+        util.save_image_grid(f'images/eval/epoch{epoch}_source_{i}.jpg', source[i, :, :, :].detach().cpu().numpy()*255)
+        util.save_image_grid(f'images/eval/epoch{epoch}_target_{i}.jpg', target[i, :, :, :].detach().cpu().numpy()*255)
+        util.save_image_grid(f'images/eval/epoch{epoch}_fake_{i}.jpg', torch.round(gen_output_t[i, :, :, :]).detach().cpu().numpy()*255)
     return np.mean(gen_loss)
 
 
@@ -142,6 +143,6 @@ EPOCH_SIZE = len(train_x_loader)
 
 while True:
     train(gen, dis, train_x_loader, train_y_loader, epoch, lr=LR)
-    eval_loss = eval(gen, val_loader)
+    eval_loss = eval(gen, val_loader, epoch)
     log.info(f'Eval Pixelwise BCE Loss: {eval_loss}')
     epoch += 1

@@ -15,25 +15,15 @@ from dataloader import get_dataloaders
 import util
 
 
+log = util.get_logger('save', 'log_train')
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(device)
-BATCH_SIZE = 2
+BATCH_SIZE = 32
 LR = 0.001
-TRAIN_LOSS_LOG = f"logs/GlyphNet_{datetime.now().strftime('%d%m%Y-%H%M%S')}_train_loss.txt"
-EVAL_LOSS_LOG = f"logs/GlyphNet_{datetime.now().strftime('%d%m%Y-%H%M%S')}_eval_loss.txt"
 EPOCH_SIZE = 1000
 
 
-def log_loss(dis_loss, gen_loss, file):
-    try:
-        with open(file, 'a') as f:
-            f.write("{:5.5f} {:5.5f}\n".format(dis_loss, gen_loss))
-    except:
-        with open(file, 'w') as f:
-            f.write("{:5.5f} {:5.5f}\n".format(dis_loss, gen_loss))
-
-
-def train(generator, discriminator, train_x_loader, train_y_loader, epoch, lr=0.001):
+def train(gen, dis, train_x_loader, train_y_loader, epoch, lr=0.001):
     gen.train()
     dis.train()
     dis_losses = []
@@ -69,13 +59,13 @@ def train(generator, discriminator, train_x_loader, train_y_loader, epoch, lr=0.
             
         dis_losses.append(dis_loss.item())
         gen_losses.append(gen_loss.item())
-        log_interval = 100
+        log_interval = 50
         display_interval = 500
         if (batch % log_interval == 0 or batch == EPOCH_SIZE):
             cur_dis_loss = np.mean(dis_losses)
             cur_gen_loss = np.mean(gen_losses)
             elapsed = time.time() - start_time
-            print('| epoch {:3d} | {:5d}/{:5d} batches | '
+            log.info('| epoch {:3d} | {:5d}/{:5d} batches | '
                   'lr {:02.2f} | ms/batch {:5.2f} | '
                   'loss {:5.2f}/{:5.2f}'.format(
                     epoch, batch, EPOCH_SIZE, LR,
@@ -84,37 +74,28 @@ def train(generator, discriminator, train_x_loader, train_y_loader, epoch, lr=0.
             dis_losses = []
             gen_losses = []
             start_time = time.time()
-            if batch == EPOCH_SIZE:
-                log_loss(cur_dis_loss, cur_gen_loss, TRAIN_LOSS_LOG)
         
         if (batch % display_interval == 0 or batch == EPOCH_SIZE):
-            util.save_image_grid('source.jpg', source[0, :, :, :].detach().cpu().numpy()*255)
-            util.save_image_grid('target.jpg', target[0, :, :, :].detach().cpu().numpy()*255)
-            util.save_image_grid('fake.jpg', torch.round(gen_output_t[0, :, :, :]).detach().cpu().numpy()*255)
+            for i in range(len(source)):
+                util.save_image_grid(f'images/train/epoch{batch}_source_{i}.jpg', source[i, :, :, :].detach().cpu().numpy()*255)
+                util.save_image_grid(f'images/train/epoch{batch}_target_{i}.jpg', target[i, :, :, :].detach().cpu().numpy()*255)
+                util.save_image_grid(f'images/train/epoch{batch}_fake_{i}.jpg', torch.round(gen_output_t[i, :, :, :]).detach().cpu().numpy()*255)
 
 
-def test():
-    print("Evaluating...")
+def eval(gen, val_loader):
+    log.info("Evaluating...")
     gen.eval()
     gen_loss = []
-    x_batch = []
-    y_batch = []
-    for sample_glyphs in test_fonts:
-        x_sample = torch.cat([glyphs_dict[s] for s in sample_glyphs], dim=1)
-        x_sample[0, 5:] = 0  # Zero out all glyphs except for first 5
-        x_batch.append(x_sample)
-        y_batch.append(torch.cat([glyphs_dict[s] for s in sample_glyphs], dim=1))
-    x_batch_t = torch.cat(x_batch, dim=0).to(device)
-    y_batch_t = torch.cat(y_batch, dim=0).to(device)
-    gen_output_t = gen(x_batch_t)
-    gen_loss.append(criterion(gen_output_t, y_batch_t).item())
+    for batch_x in tqdm(val_loader):
+        source = batch_x['source'].to(device)
+        target = batch_x['target'].to(device)
+    gen_output_t = gen(source)
+    gen_loss.append(criterion(gen_output_t, target).item())
     gen.train()
-    display(PIL.Image.fromarray(np.concatenate(x_batch_t[0, :16, :, :].detach().cpu().numpy()*255, axis=1)).convert("RGB"))
-    display(PIL.Image.fromarray(np.concatenate(y_batch_t[0, :16, :, :].detach().cpu().numpy()*255, axis=1)).convert("RGB"))
-    display(PIL.Image.fromarray(np.concatenate(torch.round(gen_output_t[0, :16, :, :]).detach().cpu().numpy()*255, axis=1)).convert("RGB"))
-    display(PIL.Image.fromarray(np.concatenate(x_batch_t[1, :16, :, :].detach().cpu().numpy()*255, axis=1)).convert("RGB"))
-    display(PIL.Image.fromarray(np.concatenate(y_batch_t[1, :16, :, :].detach().cpu().numpy()*255, axis=1)).convert("RGB"))
-    display(PIL.Image.fromarray(np.concatenate(torch.round(gen_output_t[1, :16, :, :]).detach().cpu().numpy()*255, axis=1)).convert("RGB"))
+    for i in range(len(source)):
+        util.save_image_grid(f'images/eval/epoch{batch}_source_{i}.jpg', source[i, :, :, :].detach().cpu().numpy()*255)
+        util.save_image_grid(f'images/eval/epoch{batch}_target_{i}.jpg', target[i, :, :, :].detach().cpu().numpy()*255)
+        util.save_image_grid(f'images/eval/epoch{batch}_fake_{i}.jpg', torch.round(gen_output_t[i, :, :, :]).detach().cpu().numpy()*255)
     return np.mean(gen_loss)
 
 
@@ -158,6 +139,9 @@ gen = Generator().to(device)
 dis = Discriminator().to(device)
 epoch = 1
 EPOCH_SIZE = len(train_x_loader)
+
 while True:
     train(gen, dis, train_x_loader, train_y_loader, epoch, lr=LR)
+    eval_loss = eval(gen, val_loader)
+    log.info(f'Eval Pixelwise BCE Loss: {eval_loss}')
     epoch += 1

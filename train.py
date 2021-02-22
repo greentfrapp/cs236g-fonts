@@ -133,7 +133,7 @@ val_fonts = []
 with open('val52_fonts.txt', 'r') as file:
     for font in file:
         val_fonts.append(font.strip())
-train_x_loader, train_y_loader, val_loader = get_dataloaders('data/jpg', 'data/jpg', train_fonts, val_fonts, BATCH_SIZE)
+train_x_loader, train_y_loader, val_loader = get_dataloaders('data/jpg', 'data/jpg', train_fonts, val_fonts, BATCH_SIZE, logger=log)
 # Initialize models
 gen = Generator().to(device)
 dis = Discriminator().to(device)

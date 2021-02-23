@@ -1,5 +1,7 @@
 fonts-master/
 data/
+images/
+data_all/
 *.zip
 valid_fonts*
 

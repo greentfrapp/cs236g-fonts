@@ -15,10 +15,11 @@ from dataloader import get_dataloaders
 import util
 
 
-log = util.get_logger('save', 'log_train')
+TRAIN_ID = time.strftime('%Y%m%d_%H%M%S', time.localtime())
+log = util.get_logger('save', 'log_train_'+TRAIN_ID)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(device)
-BATCH_SIZE = 32
+BATCH_SIZE = 16
 LR = 0.001
 EPOCH_SIZE = 1000
 
@@ -53,7 +54,7 @@ def train(gen, dis, train_x_loader, train_y_loader, epoch, lr=0.001):
         emb_t = gen.encode(source)
         gen_output_t = gen.decode(emb_t)
         dis_output_fake_t = dis(gen_output_t)
-        gen_loss = 0.5 * criterion(gen_output_t, target) + 0.5 * torch.mean(dis_output_fake_t ** 2)
+        gen_loss = 100 * criterion(gen_output_t, target) + torch.mean(dis_output_fake_t ** 2)
         gen_loss.backward()
         gen_optimizer.step()
             
@@ -75,14 +76,16 @@ def train(gen, dis, train_x_loader, train_y_loader, epoch, lr=0.001):
             gen_losses = []
             start_time = time.time()
         
-        if (batch % display_interval == 0 or batch == EPOCH_SIZE):
+        if (batch % display_interval == 0 or batch == EPOCH_SIZE) and epoch % 10 == 0:
+            Path(f'images/train/{TRAIN_ID}/').mkdir(parents=True, exist_ok=True)
             for i in range(len(source)):
-                util.save_image_grid(f'images/train/epoch{epoch}_source_{i}.jpg', source[i, :, :, :].detach().cpu().numpy()*255)
-                util.save_image_grid(f'images/train/epoch{epoch}_target_{i}.jpg', target[i, :, :, :].detach().cpu().numpy()*255)
-                util.save_image_grid(f'images/train/epoch{epoch}_fake_{i}.jpg', torch.round(gen_output_t[i, :, :, :]).detach().cpu().numpy()*255)
+                util.save_image_grid(f'images/train/{TRAIN_ID}/epoch{epoch}_source_{i}.jpg', source[i, :, :, :].detach().cpu().numpy()*255)
+                util.save_image_grid(f'images/train/{TRAIN_ID}/epoch{epoch}_target_{i}.jpg', target[i, :, :, :].detach().cpu().numpy()*255)
+                util.save_image_grid(f'images/train/{TRAIN_ID}/epoch{epoch}_fake_{i}.jpg', torch.round(gen_output_t[i, :, :, :]).detach().cpu().numpy()*255)
 
 
 def eval(gen, val_loader, epoch):
+    Path(f'images/eval/{TRAIN_ID}/').mkdir(parents=True, exist_ok=True)
     log.info("Evaluating...")
     gen.eval()
     gen_loss = []
@@ -94,9 +97,9 @@ def eval(gen, val_loader, epoch):
     gen_loss.append(criterion(gen_output_t, target).item())
     gen.train()
     for i in range(len(source)):
-        util.save_image_grid(f'images/eval/epoch{epoch}_source_{i}.jpg', source[i, :, :, :].detach().cpu().numpy()*255)
-        util.save_image_grid(f'images/eval/epoch{epoch}_target_{i}.jpg', target[i, :, :, :].detach().cpu().numpy()*255)
-        util.save_image_grid(f'images/eval/epoch{epoch}_fake_{i}.jpg', torch.round(gen_output_t[i, :, :, :]).detach().cpu().numpy()*255)
+        util.save_image_grid(f'images/eval/{TRAIN_ID}/epoch{epoch}_source_{i}.jpg', source[i, :, :, :].detach().cpu().numpy()*255)
+        util.save_image_grid(f'images/eval/{TRAIN_ID}/epoch{epoch}_target_{i}.jpg', target[i, :, :, :].detach().cpu().numpy()*255)
+        util.save_image_grid(f'images/eval/{TRAIN_ID}/epoch{epoch}_fake_{i}.jpg', torch.round(gen_output_t[i, :, :, :]).detach().cpu().numpy()*255)
     return np.mean(gen_loss)
 
 
@@ -143,6 +146,7 @@ EPOCH_SIZE = len(train_x_loader)
 
 while True:
     train(gen, dis, train_x_loader, train_y_loader, epoch, lr=LR)
-    eval_loss = eval(gen, val_loader, epoch)
-    log.info(f'Eval Pixelwise BCE Loss: {eval_loss}')
+    if epoch % 10 == 0:
+        eval_loss = eval(gen, val_loader, epoch)
+        log.info(f'Eval Pixelwise BCE Loss: {eval_loss}')
     epoch += 1

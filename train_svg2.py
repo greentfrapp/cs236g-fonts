@@ -40,14 +40,14 @@ def train(gen, dis, train_x_loader, train_y_loader, epoch, lr=0.001):
         target = batch_x['target'].to(device)
         real = batch_y['target'].to(device)
 
-        z = gen.sample_z(target.shape[0], device=self.device)
+        z = gen.sample_z(BATCH_SIZE, device=device)
         z = z.repeat(52, 1)  # shape = (bs*52, z_dim)
-        glyph_one_hot = torch.eye(52).repeat(target.shape[0], 1)  # shape = (52*bs, 52)
-        z = torch.concat([z, glyph_one_hot], dim=1)
-
+        glyph_one_hot = torch.eye(52).repeat(BATCH_SIZE, 1)  # shape = (52*bs, 52)
+        z = torch.cat([z, glyph_one_hot], dim=1)
+        
         # Update Discriminator
         dis_optimizer.zero_grad()
-        gen_output_t = self.gen(z)  # shape = (52*bs, 128, 128)
+        gen_output_t = gen(z)  # shape = (52*bs, 128, 128)
         gen_output_t = gen_output_t.view(-1, 52, 128, 128)
         dis_output_fake_t = dis(gen_output_t)
         dis_output_real_t = dis(real)
@@ -57,7 +57,7 @@ def train(gen, dis, train_x_loader, train_y_loader, epoch, lr=0.001):
         
         # Update Generator
         gen_optimizer.zero_grad()
-        gen_output_t = self.gen(z)  # shape = (52*bs, 128, 128)
+        gen_output_t = gen(z)  # shape = (52*bs, 128, 128)
         gen_output_t = gen_output_t.view(-1, 52, 128, 128)
         dis_output_fake_t = dis(gen_output_t)
         gen_loss = 100 * criterion(gen_output_t, target) + torch.mean(dis_output_fake_t ** 2)
@@ -66,7 +66,7 @@ def train(gen, dis, train_x_loader, train_y_loader, epoch, lr=0.001):
             
         dis_losses.append(dis_loss.item())
         gen_losses.append(gen_loss.item())
-        log_interval = 50
+        log_interval = 1
         display_interval = 500
         if (batch % log_interval == 0 or batch == EPOCH_SIZE):
             cur_dis_loss = np.mean(dis_losses)

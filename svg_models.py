@@ -35,7 +35,7 @@ class BaseVectorModel(BaseModel):
 
 class FontGenerator(BaseVectorModel):
     def __init__(self, num_strokes=4, n_glyphs=52,
-                 zdim=128, width=32, imsize=32,
+                 zdim=128, width=32, imsize=128,
                  n_segments=32,
                  stroke_width=None):
         super(FontGenerator, self).__init__()

@@ -42,7 +42,7 @@ def train(gen, dis, train_x_loader, train_y_loader, epoch, lr=0.001):
 
         z = gen.sample_z(BATCH_SIZE, device=device)
         z = z.repeat(52, 1)  # shape = (bs*52, z_dim)
-        glyph_one_hot = torch.eye(52).repeat(BATCH_SIZE, 1)  # shape = (52*bs, 52)
+        glyph_one_hot = torch.eye(52).repeat(BATCH_SIZE, 1).to(device)  # shape = (52*bs, 52)
         z = torch.cat([z, glyph_one_hot], dim=1)
         
         # Update Discriminator

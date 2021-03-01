@@ -49,7 +49,7 @@ def train(gen, dis, train_x_loader, train_y_loader, epoch, lr=0.001):
         dis_optimizer.zero_grad()
         gen_output_t = gen(z)  # shape = (52*bs, 128, 128)
         gen_output_t = gen_output_t.view(-1, 52, 128, 128)
-        dis_output_fake_t = dis(gen_output_t)
+        dis_output_fake_t = dis(gen_output_t.detach())
         dis_output_real_t = dis(real)
         dis_loss = 0.5 * torch.mean((1 - dis_output_fake_t) ** 2) + 0.5 * torch.mean(dis_output_real_t ** 2)
         dis_loss.backward()
@@ -60,7 +60,7 @@ def train(gen, dis, train_x_loader, train_y_loader, epoch, lr=0.001):
         gen_output_t = gen(z)  # shape = (52*bs, 128, 128)
         gen_output_t = gen_output_t.view(-1, 52, 128, 128)
         dis_output_fake_t = dis(gen_output_t)
-        gen_loss = 100 * criterion(gen_output_t, target) + torch.mean(dis_output_fake_t ** 2)
+        gen_loss = torch.mean(dis_output_fake_t ** 2)
         gen_loss.backward()
         gen_optimizer.step()
             

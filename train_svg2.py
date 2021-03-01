@@ -66,28 +66,28 @@ def train(gen, dis, train_x_loader, train_y_loader, epoch, lr=0.001):
             
         dis_losses.append(dis_loss.item())
         gen_losses.append(gen_loss.item())
-        log_interval = 50
+        log_interval = 1
         display_interval = 1
-        if (batch % log_interval == 0 or batch == EPOCH_SIZE):
-            cur_dis_loss = np.mean(dis_losses)
-            cur_gen_loss = np.mean(gen_losses)
-            elapsed = time.time() - start_time
-            log.info('| epoch {:3d} | {:5d}/{:5d} batches | '
-                  'lr {:02.2f} | ms/batch {:5.2f} | '
-                  'loss {:5.2f}/{:5.2f}'.format(
-                    epoch, batch, EPOCH_SIZE, LR,
-                    elapsed * 1000 / log_interval,
-                    cur_dis_loss, cur_gen_loss))
-            dis_losses = []
-            gen_losses = []
-            start_time = time.time()
+        # if (batch % log_interval == 0 or batch == EPOCH_SIZE):
+        cur_dis_loss = np.mean(dis_losses)
+        cur_gen_loss = np.mean(gen_losses)
+        elapsed = time.time() - start_time
+        log.info('| epoch {:3d} | {:5d}/{:5d} batches | '
+              'lr {:02.2f} | ms/batch {:5.2f} | '
+              'loss {:5.2f}/{:5.2f}'.format(
+                epoch, batch, EPOCH_SIZE, LR,
+                elapsed * 1000 / log_interval,
+                cur_dis_loss, cur_gen_loss))
+        dis_losses = []
+        gen_losses = []
+        start_time = time.time()
         
-        if (batch % display_interval == 0 or batch == EPOCH_SIZE) and epoch % 10 == 0:
-            Path(f'images/train/{TRAIN_ID}/').mkdir(parents=True, exist_ok=True)
-            for i in range(len(source)):
-                util.save_image_grid(f'images/train/{TRAIN_ID}/epoch{epoch}_source_{i}.jpg', source[i, :, :, :].detach().cpu().numpy()*255)
-                util.save_image_grid(f'images/train/{TRAIN_ID}/epoch{epoch}_target_{i}.jpg', target[i, :, :, :].detach().cpu().numpy()*255)
-                util.save_image_grid(f'images/train/{TRAIN_ID}/epoch{epoch}_fake_{i}.jpg', torch.round(gen_output_t[i, :, :, :]).detach().cpu().numpy()*255)
+        # if (batch % display_interval == 0 or batch == EPOCH_SIZE):
+        Path(f'images/train/{TRAIN_ID}/').mkdir(parents=True, exist_ok=True)
+        for i in range(len(source)):
+            util.save_image_grid(f'images/train/{TRAIN_ID}/epoch{epoch}_source_{i}.jpg', source[i, :, :, :].detach().cpu().numpy()*255)
+            util.save_image_grid(f'images/train/{TRAIN_ID}/epoch{epoch}_target_{i}.jpg', target[i, :, :, :].detach().cpu().numpy()*255)
+            util.save_image_grid(f'images/train/{TRAIN_ID}/epoch{epoch}_fake_{i}.jpg', torch.round(gen_output_t[i, :, :, :]).detach().cpu().numpy()*255)
 
 
 def eval(gen, val_loader, epoch):

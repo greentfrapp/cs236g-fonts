@@ -67,7 +67,7 @@ def train(gen, dis, train_x_loader, train_y_loader, epoch, lr=0.001):
         dis_losses.append(dis_loss.item())
         gen_losses.append(gen_loss.item())
         log_interval = 50
-        display_interval = 500
+        display_interval = 1
         if (batch % log_interval == 0 or batch == EPOCH_SIZE):
             cur_dis_loss = np.mean(dis_losses)
             cur_gen_loss = np.mean(gen_losses)

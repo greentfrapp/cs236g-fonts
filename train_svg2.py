@@ -31,7 +31,7 @@ def train(gen, dis, train_x_loader, train_y_loader, epoch, lr=0.001):
     dis_losses = []
     gen_losses = []
     criterion = nn.BCELoss()
-    dis_optimizer = torch.optim.Adam(dis.parameters(), lr=lr)
+    dis_optimizer = torch.optim.Adam(dis.parameters(), lr=0.0001)
     gen_optimizer = torch.optim.Adam(gen.parameters(), lr=lr)
     start_time = time.time()
     for batch, (batch_x, batch_y) in tqdm(enumerate(zip(train_x_loader, train_y_loader), start=1)):
@@ -67,7 +67,7 @@ def train(gen, dis, train_x_loader, train_y_loader, epoch, lr=0.001):
         dis_losses.append(dis_loss.item())
         gen_losses.append(gen_loss.item())
         log_interval = 50
-        display_interval = 500
+        display_interval = 50
         if (batch % log_interval == 0 or batch == EPOCH_SIZE):
             cur_dis_loss = np.mean(dis_losses)
             cur_gen_loss = np.mean(gen_losses)
@@ -82,7 +82,7 @@ def train(gen, dis, train_x_loader, train_y_loader, epoch, lr=0.001):
             gen_losses = []
             start_time = time.time()
         
-        if (batch % display_interval == 0 or batch == EPOCH_SIZE) and epoch % 10 == 0:
+        if (batch % display_interval == 0 or batch == EPOCH_SIZE):
             Path(f'images/train/{TRAIN_ID}/').mkdir(parents=True, exist_ok=True)
             for i in range(len(source)):
                 # util.save_image_grid(f'images/train/{TRAIN_ID}/epoch{epoch}_source_{i}.jpg', source[i, :, :, :].detach().cpu().numpy()*255)

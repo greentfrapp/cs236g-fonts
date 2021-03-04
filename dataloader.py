@@ -12,7 +12,7 @@ BATCH_SIZE = 16
 
 
 class FontDataset(Dataset):
-    def __init__(self, path, fonts=None, mask_n=42):
+    def __init__(self, path, fonts=None, mask_n=42, resize=128):
         self.path = Path(path)
         self.fonts = fonts
         if self.fonts is None:
@@ -21,6 +21,7 @@ class FontDataset(Dataset):
                 if font.is_dir():
                     self.fonts.append(font.stem)
         self.mask_n = mask_n
+        self.resize = resize
 
     def load_font(self, font_path):
         masked = np.random.choice(52, size=self.mask_n, replace=False)
@@ -28,7 +29,12 @@ class FontDataset(Dataset):
         original_stack = []
         zeros = np.zeros((1, 128, 128), dtype=np.float32)
         for i, glyph in enumerate(ALPHABETS):
-            image = np.expand_dims(np.array(Image.open(font_path / (glyph + '.jpg'))).astype(np.float32) / 255, 0)
+            image = np.expand_dims(
+                np.array(
+                    Image.open(font_path / (glyph + '.jpg')).resize(
+                        (self.resize, self.resize)
+                    ).resize((128, 128))
+                ).astype(np.float32) / 255, 0)
             original_stack.append(image)
             if i in masked:
                 masked_stack.append(zeros)
@@ -45,11 +51,11 @@ class FontDataset(Dataset):
         return len(self.fonts)
 
 
-def get_dataloaders(train_path, val_path, train_fonts=None, val_fonts=None, batch_size=32, mask_n=42, logger=None):
+def get_dataloaders(train_path, val_path, train_fonts=None, val_fonts=None, batch_size=32, mask_n=42, resize=128, logger=None):
     logger = logger or util.get_logger('save', 'log_train')
     logger.info("Preparing Training Data...")
-    train_dataset_x = FontDataset(train_path, fonts=train_fonts, mask_n=mask_n)
-    train_dataset_y = FontDataset(train_path, fonts=train_fonts, mask_n=mask_n)
+    train_dataset_x = FontDataset(train_path, fonts=train_fonts, mask_n=mask_n, resize=resize)
+    train_dataset_y = FontDataset(train_path, fonts=train_fonts, mask_n=mask_n, resize=resize)
     logger.info("Preparing Validation Data...")
     val_dataset = FontDataset(val_path, fonts=val_fonts, mask_n=mask_n)
 

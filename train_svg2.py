@@ -23,11 +23,14 @@ print(device)
 BATCH_SIZE = 16
 LR = 0.001
 EPOCH_SIZE = 1000
+GEN_UPDATES = 10
+DIS_UPDATES = 1
 
 
-def train(gen, dis, train_x_loader, train_y_loader, epoch, lr=0.001):
+def train(gen, dis, train_x_loader, train_y_loader, epoch, resize=128, lr=0.001):
     gen.train()
     dis.train()
+    gen.imsize = resize
     dis_losses = []
     gen_losses = []
     criterion = nn.BCELoss()
@@ -45,24 +48,27 @@ def train(gen, dis, train_x_loader, train_y_loader, epoch, lr=0.001):
         glyph_one_hot = torch.eye(52).repeat(BATCH_SIZE, 1).to(device)  # shape = (52*bs, 52)
         z = torch.cat([z, glyph_one_hot], dim=1)
         
-        # Update Discriminator
-        dis_optimizer.zero_grad()
-        gen_output_t = gen(z)  # shape = (52*bs, 128, 128)
-        gen_output_t = gen_output_t.view(-1, 52, 128, 128)
-        dis_output_fake_t = dis(gen_output_t.detach())
-        dis_output_real_t = dis(real)
-        dis_loss = 0.5 * torch.mean((1 - dis_output_fake_t) ** 2) + 0.5 * torch.mean(dis_output_real_t ** 2)
-        dis_loss.backward()
-        dis_optimizer.step()
-        
         # Update Generator
-        gen_optimizer.zero_grad()
-        gen_output_t = gen(z)  # shape = (52*bs, 128, 128)
-        gen_output_t = gen_output_t.view(-1, 52, 128, 128)
-        dis_output_fake_t = dis(gen_output_t)
-        gen_loss = torch.mean(dis_output_fake_t ** 2)
-        gen_loss.backward()
-        gen_optimizer.step()
+        for i in range(GEN_UPDATES):
+            gen_optimizer.zero_grad()
+            gen_output_t = gen(z)  # shape = (52*bs, resize, resize)
+            gen_output_t = gen_output_t.view(-1, 52, resize, resize)
+            dis_output_fake_t = dis(F.interpolate(gen_output_t, 128))
+            gen_loss = torch.mean(dis_output_fake_t ** 2)
+            gen_loss.backward()
+            gen_optimizer.step()
+
+        # Update Discriminator
+        for i in range(DIS_UPDATES):
+            dis_optimizer.zero_grad()
+            gen_output_t = gen(z)  # shape = (52*bs, resize, resize)
+            gen_output_t = gen_output_t.view(-1, 52, resize, resize)
+            gen_output_t = F.interpolate(gen_output_t.detach(), 128)
+            dis_output_fake_t = dis(gen_output_t)
+            dis_output_real_t = dis(real)
+            dis_loss = 0.5 * torch.mean((1 - dis_output_fake_t) ** 2) + 0.5 * torch.mean(dis_output_real_t ** 2)
+            dis_loss.backward()
+            dis_optimizer.step()
             
         dis_losses.append(dis_loss.item())
         gen_losses.append(gen_loss.item())
@@ -88,6 +94,7 @@ def train(gen, dis, train_x_loader, train_y_loader, epoch, lr=0.001):
                 # util.save_image_grid(f'images/train/{TRAIN_ID}/epoch{epoch}_source_{i}.jpg', source[i, :, :, :].detach().cpu().numpy()*255)
                 # util.save_image_grid(f'images/train/{TRAIN_ID}/epoch{epoch}_target_{i}.jpg', target[i, :, :, :].detach().cpu().numpy()*255)
                 util.save_image_grid(f'images/train/{TRAIN_ID}/epoch{epoch}_fake_{i}.jpg', torch.round(gen_output_t[i, :, :, :]).detach().cpu().numpy()*255)
+    return cur_dis_loss, cur_gen_loss
 
 
 def eval(gen, val_loader, epoch):
@@ -143,16 +150,39 @@ val_fonts = []
 with open('val52_fonts.txt', 'r') as file:
     for font in file:
         val_fonts.append(font.strip())
-train_x_loader, train_y_loader, val_loader = get_dataloaders('data/jpg', 'data/jpg', train_fonts, val_fonts, BATCH_SIZE, logger=log)
+
 # Initialize models
 gen = FontGenerator().to(device)
 dis = Discriminator().to(device)
-epoch = 1
-EPOCH_SIZE = len(train_x_loader)
 
-while True:
-    train(gen, dis, train_x_loader, train_y_loader, epoch, lr=LR)
-    # if epoch % 10 == 0:
-    #     eval_loss = eval(gen, val_loader, epoch)
-    #     log.info(f'Eval Pixelwise BCE Loss: {eval_loss}')
-    epoch += 1
+for resize_factor in range(2, 8):
+    try:
+        train_x_loader, train_y_loader, val_loader = get_dataloaders(
+            'data/jpg',
+            'data/jpg',
+            train_fonts,
+            val_fonts,
+            BATCH_SIZE,
+            resize=2**resize_factor,
+            logger=log
+        )
+        epoch = 1
+        EPOCH_SIZE = len(train_x_loader)
+
+        while True:
+            dis_loss, gen_loss = train(
+                gen,
+                dis,
+                train_x_loader,
+                train_y_loader,
+                epoch,
+                lr=LR
+            )
+            # if epoch % 10 == 0:
+            #     eval_loss = eval(gen, val_loader, epoch)
+            #     log.info(f'Eval Pixelwise BCE Loss: {eval_loss}')
+            epoch += 1
+            if dis_loss > 0.9:
+                break
+    except KeyboardInterrupt:
+        break

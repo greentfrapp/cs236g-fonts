@@ -164,8 +164,8 @@ with open('val52_fonts.txt', 'r') as file:
         val_fonts.append(font.strip())
 
 # Initialize models
-gen = FontGenerator().to(device)
-dis = Discriminator().to(device)
+gen = FontGenerator(num_strokes=2, n_segments=4).to(device)
+dis = Discriminator(ndf=64, n_layers=3).to(device)
 
 for resize_factor in range(2, 8):
     train_x_loader, train_y_loader, val_loader = get_dataloaders(

@@ -46,11 +46,12 @@ class Generator(nn.Module):
 
 
 class Discriminator(nn.Module):
-    def __init__(self):
+    def __init__(self, ndf=64, n_layers=3):
         super(Discriminator, self).__init__()
         self.model = NLayerDiscriminator(
             input_nc=52,
-            ndf=64,
+            ndf=ndf,
+            n_layers=n_layers,
             use_sigmoid=True,
             norm_layer=get_norm_layer(norm_type="batch"),
             norm_type="batch",

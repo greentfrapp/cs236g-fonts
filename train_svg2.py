@@ -181,22 +181,22 @@ for resize_factor in range(2, 8):
     EPOCH_SIZE = len(train_x_loader)
 
     while True:
-        # try:
-        dis_loss, gen_loss = train(
-            gen,
-            dis,
-            train_x_loader,
-            train_y_loader,
-            epoch,
-            resize=2**resize_factor,
-            lr=LR
-        )
-        # if epoch % 10 == 0:
-        #     eval_loss = eval(gen, val_loader, epoch)
-        #     log.info(f'Eval Pixelwise BCE Loss: {eval_loss}')
-        epoch += 1
-        save(gen, dis)
-        if dis_loss > 0.9:
+        try:
+            dis_loss, gen_loss = train(
+                gen,
+                dis,
+                train_x_loader,
+                train_y_loader,
+                epoch,
+                resize=2**resize_factor,
+                lr=LR
+            )
+            # if epoch % 10 == 0:
+            #     eval_loss = eval(gen, val_loader, epoch)
+            #     log.info(f'Eval Pixelwise BCE Loss: {eval_loss}')
+            epoch += 1
+            save(gen, dis)
+            if dis_loss > 0.9:
+                break
+        except KeyboardInterrupt:
             break
-        # except KeyboardInterrupt:
-        #     break

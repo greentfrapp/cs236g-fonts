@@ -20,7 +20,7 @@ TRAIN_ID = time.strftime('%Y%m%d_%H%M%S', time.localtime())
 log = util.get_logger('save', 'log_train_'+TRAIN_ID)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(device)
-BATCH_SIZE = 16
+BATCH_SIZE = 4
 LR = 0.001
 EPOCH_SIZE = 1000
 GEN_UPDATES = 5
@@ -168,35 +168,35 @@ gen = FontGenerator().to(device)
 dis = Discriminator().to(device)
 
 for resize_factor in range(2, 8):
-    try:
-        train_x_loader, train_y_loader, val_loader = get_dataloaders(
-            'data/jpg',
-            'data/jpg',
-            train_fonts,
-            val_fonts,
-            BATCH_SIZE,
-            resize=2**resize_factor,
-            logger=log
-        )
-        epoch = 1
-        EPOCH_SIZE = len(train_x_loader)
+    train_x_loader, train_y_loader, val_loader = get_dataloaders(
+        'data/jpg',
+        'data/jpg',
+        train_fonts,
+        val_fonts,
+        BATCH_SIZE,
+        resize=2**resize_factor,
+        logger=log
+    )
+    epoch = 1
+    EPOCH_SIZE = len(train_x_loader)
 
-        while True:
-            dis_loss, gen_loss = train(
-                gen,
-                dis,
-                train_x_loader,
-                train_y_loader,
-                epoch,
-                resize=2**resize_factor,
-                lr=LR
-            )
-            # if epoch % 10 == 0:
-            #     eval_loss = eval(gen, val_loader, epoch)
-            #     log.info(f'Eval Pixelwise BCE Loss: {eval_loss}')
-            epoch += 1
-            save(gen, dis)
-            if dis_loss > 0.9:
-                break
-    except KeyboardInterrupt:
-        break
+    while True:
+        # try:
+        dis_loss, gen_loss = train(
+            gen,
+            dis,
+            train_x_loader,
+            train_y_loader,
+            epoch,
+            resize=2**resize_factor,
+            lr=LR
+        )
+        # if epoch % 10 == 0:
+        #     eval_loss = eval(gen, val_loader, epoch)
+        #     log.info(f'Eval Pixelwise BCE Loss: {eval_loss}')
+        epoch += 1
+        save(gen, dis)
+        if dis_loss > 0.9:
+            break
+        # except KeyboardInterrupt:
+        #     break

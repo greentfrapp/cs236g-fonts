@@ -29,6 +29,7 @@ DIS_UPDATES = 1
 
 def save(gen, dis):
     save_path = Path('save') / ('models_'+TRAIN_ID)
+    save_path.mkdir(parents=True, exist_ok=True)
     log.info(f'Saving models to {str(save_path)}...')
     torch.save(gen.state_dict(), str(save_path / 'gen.ckpt'))
     torch.save(dis.state_dict(), str(save_path / 'dis.ckpt'))

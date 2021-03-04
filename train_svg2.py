@@ -41,7 +41,7 @@ def train(gen, dis, train_x_loader, train_y_loader, epoch, resize=128, lr=0.001)
     dis_losses = []
     gen_losses = []
     criterion = nn.BCELoss()
-    dis_optimizer = torch.optim.Adam(dis.parameters(), lr=0.0001)
+    dis_optimizer = torch.optim.Adam(dis.parameters(), lr=0.00001)
     gen_optimizer = torch.optim.Adam(gen.parameters(), lr=lr)
     start_time = time.time()
     for batch, (batch_x, batch_y) in tqdm(enumerate(zip(train_x_loader, train_y_loader), start=1)):

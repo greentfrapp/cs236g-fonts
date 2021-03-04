@@ -27,6 +27,13 @@ GEN_UPDATES = 10
 DIS_UPDATES = 1
 
 
+def save(gen, dis):
+    save_path = Path('save') / 'models_'+TRAIN_ID
+    log.info(f'Saving models to {str(save_path)}...')
+    torch.save(gen.state_dict(), str(save_path / 'gen.ckpt'))
+    torch.save(dis.state_dict(), str(save_path / 'dis.ckpt'))
+
+
 def train(gen, dis, train_x_loader, train_y_loader, epoch, resize=128, lr=0.001):
     gen.train()
     dis.train()
@@ -182,6 +189,7 @@ for resize_factor in range(2, 8):
             #     eval_loss = eval(gen, val_loader, epoch)
             #     log.info(f'Eval Pixelwise BCE Loss: {eval_loss}')
             epoch += 1
+            save(gen, dis)
             if dis_loss > 0.9:
                 break
     except KeyboardInterrupt:

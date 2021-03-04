@@ -183,6 +183,7 @@ for resize_factor in range(2, 8):
                 train_x_loader,
                 train_y_loader,
                 epoch,
+                resize=2**resize_factor,
                 lr=LR
             )
             # if epoch % 10 == 0:

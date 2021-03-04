@@ -20,10 +20,10 @@ TRAIN_ID = time.strftime('%Y%m%d_%H%M%S', time.localtime())
 log = util.get_logger('save', 'log_train_'+TRAIN_ID)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(device)
-BATCH_SIZE = 8
+BATCH_SIZE = 16
 LR = 0.001
 EPOCH_SIZE = 1000
-GEN_UPDATES = 10
+GEN_UPDATES = 5
 DIS_UPDATES = 1
 
 
@@ -50,13 +50,13 @@ def train(gen, dis, train_x_loader, train_y_loader, epoch, resize=128, lr=0.001)
         target = batch_x['target'].to(device)
         real = batch_y['target'].to(device)
 
-        z = gen.sample_z(BATCH_SIZE, device=device)
-        z = z.repeat(52, 1)  # shape = (bs*52, z_dim)
-        glyph_one_hot = torch.eye(52).repeat(BATCH_SIZE, 1).to(device)  # shape = (52*bs, 52)
-        z = torch.cat([z, glyph_one_hot], dim=1)
-        
         # Update Generator
         for i in range(GEN_UPDATES):
+            z = gen.sample_z(BATCH_SIZE, device=device)
+            z = z.repeat(52, 1)  # shape = (bs*52, z_dim)
+            glyph_one_hot = torch.eye(52).repeat(BATCH_SIZE, 1).to(device)  # shape = (52*bs, 52)
+            z = torch.cat([z, glyph_one_hot], dim=1)
+            
             gen_optimizer.zero_grad()
             gen_output_t = gen(z)  # shape = (52*bs, resize, resize)
             gen_output_t = gen_output_t.view(-1, 52, resize, resize)
@@ -67,6 +67,11 @@ def train(gen, dis, train_x_loader, train_y_loader, epoch, resize=128, lr=0.001)
 
         # Update Discriminator
         for i in range(DIS_UPDATES):
+            z = gen.sample_z(BATCH_SIZE, device=device)
+            z = z.repeat(52, 1)  # shape = (bs*52, z_dim)
+            glyph_one_hot = torch.eye(52).repeat(BATCH_SIZE, 1).to(device)  # shape = (52*bs, 52)
+            z = torch.cat([z, glyph_one_hot], dim=1)
+            
             dis_optimizer.zero_grad()
             gen_output_t = gen(z)  # shape = (52*bs, resize, resize)
             gen_output_t = gen_output_t.view(-1, 52, resize, resize)

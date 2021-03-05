@@ -107,7 +107,7 @@ def train(gen, dis, train_x_loader, train_y_loader, epoch, resize=128, lr=0.001)
                 # util.save_image_grid(f'images/train/{TRAIN_ID}/epoch{epoch}_source_{i}.jpg', source[i, :, :, :].detach().cpu().numpy()*255)
                 # util.save_image_grid(f'images/train/{TRAIN_ID}/epoch{epoch}_target_{i}.jpg', target[i, :, :, :].detach().cpu().numpy()*255)
                 util.save_image_grid(f'images/train/{TRAIN_ID}/epoch{epoch}_batch{batch}_fake_{i}.jpg', gen_output_t[i, :, :, :].detach().cpu().numpy()*255)
-                util.save_image_grid(f'images/train/{TRAIN_ID}/epoch{epoch}_batch{batch}_fake_{i}.jpg', real[i, :, :, :].detach().cpu().numpy()*255)
+                util.save_image_grid(f'images/train/{TRAIN_ID}/epoch{epoch}_batch{batch}_real_{i}.jpg', real[i, :, :, :].detach().cpu().numpy()*255)
     return cur_dis_loss, cur_gen_loss
 
 

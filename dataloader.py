@@ -27,7 +27,7 @@ class FontDataset(Dataset):
         masked = np.random.choice(52, size=self.mask_n, replace=False)
         masked_stack = []
         original_stack = []
-        zeros = np.zeros((1, 128, 128), dtype=np.float32)
+        zeros = np.zeros((1, self.resize, self.resize), dtype=np.float32)
         for i, glyph in enumerate(ALPHABETS):
             image = np.expand_dims(
                 np.array(

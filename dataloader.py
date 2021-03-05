@@ -33,7 +33,7 @@ class FontDataset(Dataset):
                 np.array(
                     Image.open(font_path / (glyph + '.jpg')).resize(
                         (self.resize, self.resize)
-                    ).resize((128, 128))
+                    )
                 ).astype(np.float32) / 255, 0)
             original_stack.append(image)
             if i in masked:

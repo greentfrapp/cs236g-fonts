@@ -93,7 +93,7 @@ class FontGenerator(BaseVectorModel):
         all_points = all_points.view(
             bs, self.num_strokes, self.n_segments*3+1, 2)
 
-        output, scenes = rendering.font_render(all_points, all_widths,
+        output, scenes = rendering.font_render_gpu(all_points, all_widths,
                                          canvas_size=self.imsize)
 
         # map to [-1, 1]

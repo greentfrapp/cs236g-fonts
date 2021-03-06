@@ -356,3 +356,52 @@ def font_render(all_points, all_widths, force_cpu=True,
     output = output.to(dev)
 
     return output, scenes
+
+def font_render_gpu(all_points, all_widths,
+                  canvas_size=32):
+    dev = all_points.device
+
+    all_points = 0.5*(all_points + 1.0) * canvas_size
+
+    eps = 1e-4
+    all_points = all_points + eps*th.randn_like(all_points)
+
+    bs, num_strokes, num_pts, _ = all_points.shape
+    num_segments = (num_pts - 1) // 3
+    n_out = 1
+    output = th.zeros(bs, n_out, canvas_size, canvas_size,
+                      device=all_points.device)
+
+    scenes = []
+    for k in range(bs):
+        shapes = []
+        shape_groups = []
+        for p in range(num_strokes):
+            points = all_points[k, p].contiguous().cpu()
+            # bezier
+            num_ctrl_pts = th.zeros(num_segments, dtype=th.int32) + 2
+            width = all_widths[k, p]#.cpu()
+            color = th.ones(4)
+
+            path = pydiffvg.Path(
+                num_control_points=num_ctrl_pts, points=points,
+                stroke_width=width, is_closed=False)
+            shapes.append(path)
+            path_group = pydiffvg.ShapeGroup(
+                shape_ids=th.tensor([len(shapes) - 1]),
+                fill_color=color,
+                stroke_color=None)
+            shape_groups.append(path_group)
+
+        # Rasterize
+        scenes.append((canvas_size, canvas_size, shapes, shape_groups))
+        raster = render(canvas_size, canvas_size, shapes, shape_groups,
+                        samples=2)
+        raster = raster.permute(2, 0, 1).view(4, canvas_size, canvas_size)
+
+        image = raster[:1]
+        output[k] = image
+
+    output = output.to(dev)
+
+    return output, scenes

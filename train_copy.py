@@ -237,7 +237,7 @@ if do_copy:
         single_fonts,
         val_fonts,
         BATCH_SIZE,
-        resize=16,
+        resize=8,
         logger=log
     )
     epoch = 1
@@ -249,7 +249,7 @@ if do_copy:
             train_x_loader,
             train_y_loader,
             epoch,
-            resize=16,
+            resize=8,
             lr=LR
         )
         epoch += 1

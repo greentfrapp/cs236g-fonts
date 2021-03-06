@@ -136,7 +136,7 @@ def copy(gen, train_x_loader, train_y_loader, epoch, resize=128, lr=0.001):
         gen_optimizer.zero_grad()
         gen_output_t = gen(z)  # shape = (52*bs, resize, resize)
         gen_output_t = gen_output_t.view(-1, 52, resize, resize)
-        gen_loss = criterion(real, real)
+        gen_loss = criterion(gen_output_t, real)
         gen_loss.backward()
         gen_optimizer.step()
             

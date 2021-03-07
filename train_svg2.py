@@ -8,6 +8,7 @@ from tqdm import tqdm
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import argparse
 
 from models import Generator, Discriminator
 from svg_models import FontGenerator
@@ -157,6 +158,10 @@ def interpolate():
     display(PIL.Image.fromarray(np.concatenate(torch.round(gen_output_t[0, :16, :, :]).detach().cpu().numpy()*255, axis=1)).convert("RGB"))
     return gen_output_t
 
+parser = argparse.ArgumentParser()
+parser.add_argument('--pretrain', type=str, default=None)
+args = parser.parse_args()
+
 
 # Get DataLoaders
 train_fonts = []
@@ -174,7 +179,9 @@ with open('single_font.txt', 'r') as file:
 
 # Initialize models
 gen = FontGenerator(num_strokes=2, n_segments=4).to(device)
-# dis = Discriminator(ndf=4, n_layers=2).to(device)
+if args.pretrain:
+    gen.load_state_dict(torch.load(str(Path(args.pretrain) / 'gen.ckpt')))
+dis = Discriminator(ndf=4, n_layers=2).to(device)
 
 
 for resize_factor in range(2, 8):

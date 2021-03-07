@@ -66,14 +66,9 @@ def train(gen, dis, train_x_loader, train_y_loader, epoch, resize=128, lr=0.001)
             gen_output_t = gen_output_t.view(-1, 52, resize, resize)
             dis_output_fake_t = dis(F.interpolate(gen_output_t, 128))
             gen_loss = torch.mean(dis_output_fake_t ** 2)
-            print(gen_output_t.shape)
-            print(real.shape)
-            print(gen_output_t.device)
-            print(real.device)
             gen_loss = 100 * torch.mean((gen_output_t - real) ** 2) + torch.mean(dis_output_fake_t ** 2)
             gen_loss.backward()
             gen_optimizer.step()
-            quit()
 
         # Update Discriminator
         for i in range(DIS_UPDATES):

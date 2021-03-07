@@ -66,6 +66,7 @@ def train(gen, dis, train_x_loader, train_y_loader, epoch, resize=128, lr=0.001)
             gen_output_t = gen_output_t.view(-1, 52, resize, resize)
             dis_output_fake_t = dis(F.interpolate(gen_output_t, 128))
             gen_loss = torch.mean(dis_output_fake_t ** 2)
+            gen_loss = 100 * criterion(gen_output_t, target) + torch.mean(dis_output_fake_t ** 2)
             gen_loss.backward()
             gen_optimizer.step()
 

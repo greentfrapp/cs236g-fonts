@@ -70,10 +70,10 @@ def train(gen, dis, train_x_loader, train_y_loader, epoch, resize=128, lr=0.001)
             print(real.shape)
             print(gen_output_t.device)
             print(real.device)
-            quit()
             gen_loss = 100 * criterion(gen_output_t, real) + torch.mean(dis_output_fake_t ** 2)
             gen_loss.backward()
             gen_optimizer.step()
+            quit()
 
         # Update Discriminator
         for i in range(DIS_UPDATES):

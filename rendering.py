@@ -387,11 +387,11 @@ def font_render_gpu(all_points, all_widths,
                 num_control_points=num_ctrl_pts, points=points,
                 stroke_width=width, is_closed=False)
             shapes.append(path)
-            path_group = pydiffvg.ShapeGroup(
-                shape_ids=th.tensor([len(shapes) - 1]),
-                fill_color=color,
-                stroke_color=None)
-            shape_groups.append(path_group)
+        path_group = pydiffvg.ShapeGroup(
+            shape_ids=th.tensor(list(range(num_strokes))),
+            fill_color=color,
+            stroke_color=None)
+        shape_groups.append(path_group)
 
         # Rasterize
         scenes.append((canvas_size, canvas_size, shapes, shape_groups))

@@ -11,7 +11,7 @@ import torch.nn.functional as F
 import argparse
 
 from models import Generator, Discriminator
-from svg_models import FontGenerator
+from svg_models import FontAdjuster
 from glyphs import ALPHABETS
 from dataloader import get_dataloaders
 import util
@@ -89,8 +89,8 @@ def train(gen, dis, train_x_loader, train_y_loader, epoch, resize=128, lr=0.001)
             
         dis_losses.append(dis_loss.item())
         gen_losses.append(gen_loss.item())
-        log_interval = 50
-        display_interval = 50
+        log_interval = 1
+        display_interval = 1
         if (batch % log_interval == 0 or batch == EPOCH_SIZE):
             cur_dis_loss = np.mean(dis_losses)
             cur_gen_loss = np.mean(gen_losses)
@@ -113,61 +113,6 @@ def train(gen, dis, train_x_loader, train_y_loader, epoch, resize=128, lr=0.001)
                 util.save_image_grid(f'images/train/{TRAIN_ID}/epoch{epoch}_batch{batch}_fake_{i}.jpg', gen_output_t[i, :, :, :].detach().cpu().numpy()*255)
                 util.save_image_grid(f'images/train/{TRAIN_ID}/epoch{epoch}_batch{batch}_real_{i}.jpg', real[i, :, :, :].detach().cpu().numpy()*255)
     return cur_dis_loss, cur_gen_loss
-
-
-def copy(gen, train_x_loader, train_y_loader, epoch, resize=128, lr=0.001):
-    gen.train()
-    gen.imsize = resize
-    gen_losses = []
-    criterion = nn.MSELoss()
-    gen_optimizer = torch.optim.Adam(gen.parameters(), lr=lr)
-    start_time = time.time()
-    for batch, (batch_x, batch_y) in tqdm(enumerate(zip(train_x_loader, train_y_loader), start=1)):
-
-        source = batch_x['source'].to(device)
-        target = batch_x['target'].to(device)
-        real = batch_y['target'].to(device)
-
-        # Update Generator
-        z = gen.sample_z(BATCH_SIZE, device=device)
-        z = z.repeat(52, 1)  # shape = (bs*52, z_dim)
-        glyph_one_hot = torch.eye(52).repeat(BATCH_SIZE, 1).to(device)  # shape = (52*bs, 52)
-        z = torch.cat([z, glyph_one_hot], dim=1)
-            
-        gen_optimizer.zero_grad()
-        gen_output_t = gen(z)  # shape = (52*bs, resize, resize)
-        gen_output_t = gen_output_t.view(-1, 52, resize, resize)
-        for i, img in enumerate(gen_output_t):
-            util.save_image_grid(f'epoch{epoch}_batch{batch}_fake_{i}.jpg', img.detach().cpu().numpy()*255)
-        quit()
-        gen_loss = criterion(gen_output_t, real)
-        gen_loss.backward()
-        gen_optimizer.step()
-            
-        gen_losses.append(gen_loss.item())
-        log_interval = 50
-        display_interval = 50
-        if (batch % log_interval == 0 or batch == EPOCH_SIZE):
-            cur_gen_loss = np.mean(gen_losses)
-            elapsed = time.time() - start_time
-            log.info('| epoch {:3d} | {:5d}/{:5d} batches | '
-                  'lr {:02.2f} | ms/batch {:5.2f} | '
-                  'loss {:5.2f}'.format(
-                    epoch, batch, EPOCH_SIZE, LR,
-                    elapsed * 1000 / log_interval,
-                    cur_gen_loss))
-            dis_losses = []
-            gen_losses = []
-            start_time = time.time()
-        
-        if (batch % display_interval == 0 or batch == EPOCH_SIZE):
-            Path(f'images/train/{TRAIN_ID}/').mkdir(parents=True, exist_ok=True)
-            for i in range(len(source)):
-                # util.save_image_grid(f'images/train/{TRAIN_ID}/epoch{epoch}_source_{i}.jpg', source[i, :, :, :].detach().cpu().numpy()*255)
-                # util.save_image_grid(f'images/train/{TRAIN_ID}/epoch{epoch}_target_{i}.jpg', target[i, :, :, :].detach().cpu().numpy()*255)
-                util.save_image_grid(f'images/train/{TRAIN_ID}/epoch{epoch}_batch{batch}_fake_{i}.jpg', gen_output_t[i, :, :, :].detach().cpu().numpy()*255)
-                # util.save_image_grid(f'images/train/{TRAIN_ID}/epoch{epoch}_batch{batch}_real_{i}.jpg', real[i, :, :, :].detach().cpu().numpy()*255)
-    return cur_gen_loss
 
 
 def eval(gen, val_loader, epoch):
@@ -217,6 +162,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--pretrain', type=str, default=None)
 args = parser.parse_args()
 
+
 # Get DataLoaders
 train_fonts = []
 with open('train52_fonts.txt', 'r') as file:
@@ -232,42 +178,14 @@ with open('single_font.txt', 'r') as file:
         single_fonts.append(font.strip())
 
 # Initialize models
-gen = FontGenerator(num_strokes=2, n_segments=4).to(device)
+gen = FontAdjuster().to(device)
 if args.pretrain:
     print(f"Resuming from {str(Path(args.pretrain) / 'gen.ckpt')}")
-    gen.load_state_dict(torch.load(str(Path(args.pretrain) / 'gen.ckpt'), map_location=torch.device('cpu')))
-# dis = Discriminator(ndf=4, n_layers=2).to(device)
+    gen.load_state_dict(torch.load(str(Path(args.pretrain) / 'gen.ckpt')))
+dis = Discriminator(ndf=4, n_layers=2).to(device)
 
-do_copy = True
-if do_copy:
-    min_loss = np.inf
-    train_x_loader, train_y_loader, val_loader = get_dataloaders(
-        'data/jpg',
-        'data/jpg',
-        single_fonts,
-        val_fonts,
-        BATCH_SIZE,
-        resize=8,
-        logger=log
-    )
-    epoch = 1
-    EPOCH_SIZE = len(train_x_loader)
 
-    while True:
-        gen_loss = copy(
-            gen,
-            train_x_loader,
-            train_y_loader,
-            epoch,
-            resize=256,
-            lr=LR
-        )
-        epoch += 1
-        if gen_loss < min_loss:
-            save(gen=gen)
-            min_loss = gen_loss
-
-for resize_factor in range(2, 8):
+for resize_factor in [7]:
     train_x_loader, train_y_loader, val_loader = get_dataloaders(
         'data/jpg',
         'data/jpg',

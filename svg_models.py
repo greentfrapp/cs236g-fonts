@@ -3,6 +3,7 @@
 import torch as th
 
 import rendering
+from templates import ALPHABETS_TEMPLATE
 
 # LOG = ttools.get_logger(__name__)
 
@@ -31,6 +32,82 @@ class BaseVectorModel(BaseModel):
     def forward(self, z):
         # Only return the raster
         return self._forward(z)[0]
+
+
+class FontAdjuster(BaseVectorModel):
+    def __init__(self, num_strokes=3, n_glyphs=52,
+                 zdim=128, width=32, imsize=128,
+                 n_segments=56,
+                 stroke_width=None):
+        super(FontAdjuster, self).__init__()
+
+        if stroke_width is None:
+            self.stroke_width = (0.5, 3.0)
+            # LOG.warning("Setting default stroke with %s", self.stroke_width)
+        else:
+            self.stroke_width = stroke_width
+
+        self.imsize = imsize
+        self.num_strokes = num_strokes
+        self.zdim = zdim
+        self.n_glyphs = n_glyphs
+        self.n_segments = n_segments
+
+        self.trunk = th.nn.Sequential(
+            th.nn.Linear(self.zdim + self.n_glyphs, width),
+            th.nn.SELU(inplace=True),
+
+            th.nn.Linear(width, 2*width),
+            th.nn.SELU(inplace=True),
+
+            th.nn.Linear(2*width, 4*width),
+            th.nn.SELU(inplace=True),
+
+            th.nn.Linear(4*width, 8*width),
+            th.nn.SELU(inplace=True),
+        )
+
+        self.point_predictor = th.nn.Sequential(
+            th.nn.Linear(8*width, 
+                         2*self.num_strokes*(
+                             n_segments*3 + 1)),
+            th.nn.Tanh()  # bound spatial extent
+        )
+
+        self.register_buffer('all_widths', th.tensor([[0] * self.num_strokes]))
+        self.register_buffer('template', ALPHABETS_TEMPLATE)
+
+    def _forward(self, z):
+        device = th.device("cuda" if th.cuda.is_available() else "cpu")
+        bs = z.shape[0] // self.n_glyphs
+
+        feats = self.trunk(z)
+        all_points_d = self.point_predictor(feats).view(
+            bs,
+            self.n_glyphs,
+            self.num_strokes,
+            self.n_segments*3+1,
+            2
+        )
+
+        all_widths = self.all_widths.repeat(bs * self.n_glyphs, 1)
+
+        all_points = self.template.repeat(bs, 1, 1, 1, 1) + all_points_d
+        all_points = th.clamp(all_points, -1, 1)
+        all_points = all_points.view(
+            bs * self.n_glyphs,
+            self.num_strokes,
+            self.n_segments*3+1,
+            2
+        )
+
+        output, scenes = rendering.font_render_gpu(all_points, all_widths,
+                                         canvas_size=self.imsize)
+
+        # map to [-1, 1]
+        output = output*2.0 - 1.0
+
+        return output, scenes
 
 
 class FontGenerator(BaseVectorModel):

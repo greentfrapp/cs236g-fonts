@@ -185,7 +185,7 @@ if args.pretrain:
 dis = Discriminator(ndf=4, n_layers=2).to(device)
 
 
-for resize_factor in range(4, 8):
+for resize_factor in range(3, 8):
     train_x_loader, train_y_loader, val_loader = get_dataloaders(
         'data/jpg',
         'data/jpg',

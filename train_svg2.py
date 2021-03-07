@@ -180,6 +180,7 @@ with open('single_font.txt', 'r') as file:
 # Initialize models
 gen = FontGenerator(num_strokes=2, n_segments=4).to(device)
 if args.pretrain:
+    print(f"Resuming from {str(Path(args.pretrain) / 'gen.ckpt')}")
     gen.load_state_dict(torch.load(str(Path(args.pretrain) / 'gen.ckpt')))
 dis = Discriminator(ndf=4, n_layers=2).to(device)
 

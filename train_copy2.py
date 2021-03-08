@@ -45,6 +45,7 @@ def copy(gen, train_x_loader, train_y_loader, epoch, resize=128, lr=0.001, fixed
     criterion = nn.MSELoss()
     gen_optimizer = torch.optim.Adam(gen.parameters(), lr=lr)
     start_time = time.time()
+    cur_gen_loss = np.inf
     for batch, (batch_x, batch_y) in tqdm(enumerate(zip(train_x_loader, train_y_loader), start=1)):
 
         source = batch_x['source'].to(device)

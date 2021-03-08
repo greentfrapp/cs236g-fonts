@@ -65,14 +65,12 @@ def copy(gen, encoder_A, encoder_B, train_x_loader, train_y_loader, epoch, resiz
         # fixed_z = gen.sample_z(BATCH_SIZE, device=device)
         fixed_z = encoder_A(real.unsqueeze(2))
         fixed_z = encoder_B(fixed_z.squeeze(2))
-        print(fixed_z.shape)
         z_dim_size = fixed_z.shape[1] * fixed_z.shape[2] * fixed_z.shape[3]
         fixed_z = fixed_z.view(-1, 1, z_dim_size)
         z = fixed_z.repeat(1, 52, 1)  # shape = (bs*52, z_dim)
         z = z.view(-1, z_dim_size)
         glyph_one_hot = torch.eye(52).repeat(fixed_z.shape[0], 1).to(device)  # shape = (52*bs, 52)
         z = torch.cat([z, glyph_one_hot], dim=1)
-        print(z.shape)
             
         gen_output_t = gen(z)  # shape = (52*bs, resize, resize)
         gen_output_t = gen_output_t.view(-1, 52, resize, resize)
@@ -172,7 +170,7 @@ single_fonts = train_fonts[:100]
 single_fonts = [[f]*100 for f in single_fonts]
 
 # Initialize models
-gen = FontAdjuster(zdim=32*8*8).to(device)
+gen = FontAdjuster(zdim=32*4*4).to(device)
 encoder_A = ResnetGenerator_3d_conv(input_nc=52, output_nc=52).to(device)
 encoder_B = FontEncoder(input_nc=52, output_nc=52).to(device)
 if args.pretrain:

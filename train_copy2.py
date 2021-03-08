@@ -10,8 +10,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 import argparse
 
-from models import Generator, Discriminator, ResnetGenerator_3d_conv
-from svg_models import FontAdjuster, FontEncoder
+from models import Generator, Discriminator, ResnetGenerator_3d_conv, FontEncoder
+from svg_models import FontAdjuster
 from glyphs import ALPHABETS
 from dataloader import get_dataloaders
 import util

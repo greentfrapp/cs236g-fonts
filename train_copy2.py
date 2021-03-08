@@ -181,7 +181,7 @@ do_copy = True
 if do_copy:
     epoch = 1
     # fixed_z = gen.sample_z(1, device=device).repeat(BATCH_SIZE, 1)
-    resize_factor = 7
+    resize_factor = 6
     # for font in single_fonts:
     min_loss = np.inf
     train_x_loader, train_y_loader, val_loader = get_dataloaders(

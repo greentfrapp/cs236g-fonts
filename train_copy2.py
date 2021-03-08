@@ -165,7 +165,7 @@ single_fonts = [[f]*100 for f in single_fonts]
 # Initialize models
 gen = FontAdjuster().to(device)
 encoder_A = ResnetGenerator_3d_conv(input_nc=52, output_nc=52).to(device)
-encoder_B = ResnetEncoder(input_nc=52, output_nc=52).to(device)
+encoder_B = FontEncoder(input_nc=52, output_nc=52).to(device)
 if args.pretrain:
     print(f"Resuming from {str(Path(args.pretrain) / 'gen.ckpt')}")
     gen.load_state_dict(torch.load(str(Path(args.pretrain) / 'gen.ckpt'), map_location=torch.device('cpu')))

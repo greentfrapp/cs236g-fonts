@@ -163,7 +163,7 @@ do_copy = True
 if do_copy:
     epoch = 1
     fixed_z = gen.sample_z(1, device=device).repeat(BATCH_SIZE, 1)
-    for resize_factor in range(6, 8):
+    for resize_factor in [7]:
         min_loss = np.inf
         train_x_loader, train_y_loader, val_loader = get_dataloaders(
             'data/jpg',
@@ -189,4 +189,4 @@ if do_copy:
             if gen_loss < min_loss:
                 save(gen=gen)
                 min_loss = gen_loss
-            if gen_loss < 0.05: break
+            if gen_loss < 0.01: break

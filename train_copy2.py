@@ -28,7 +28,7 @@ GEN_UPDATES = 10
 DIS_UPDATES = 1
 
 
-def save(gen=None, dis=None):
+def save(gen=None, dis=None, encoder_A=None, encoder_B=None):
     save_path = Path('save') / ('models_'+TRAIN_ID)
     save_path.mkdir(parents=True, exist_ok=True)
     log.info(f'Saving models to {str(save_path)}...')
@@ -36,6 +36,10 @@ def save(gen=None, dis=None):
         torch.save(gen.state_dict(), str(save_path / 'gen.ckpt'))
     if dis:
         torch.save(dis.state_dict(), str(save_path / 'dis.ckpt'))
+    if encoder_A:
+        torch.save(encoder_A.state_dict(), str(save_path / 'enc_A.ckpt'))
+    if encoder_B:
+        torch.save(encoder_B.state_dict(), str(save_path / 'enc_B.ckpt'))
 
 
 def copy(gen, encoder_A, encoder_B, train_x_loader, train_y_loader, epoch, resize=128, lr=0.001, fixed_z=None):
@@ -199,11 +203,11 @@ if do_copy:
             train_y_loader,
             epoch,
             resize=2**resize_factor,
-            lr=LR,
+            lr=LR * 0.8**(epoch-1),
             # fixed_z=fixed_z
         )
         epoch += 1
         if gen_loss < min_loss:
-            save(gen=gen)
+            save(gen=gen, encoder_A=encoder_A, encoder_B=encoder_B)
             min_loss = gen_loss
         # if gen_loss < 0.01: break

@@ -45,7 +45,7 @@ def copy(gen, encoder_A, encoder_B, train_x_loader, train_y_loader, epoch, resiz
     gen.imsize = resize
     gen_losses = []
     criterion = nn.MSELoss()
-    gen_optimizer = torch.optim.Adam(gen.parameters() + encoder_A.parameters() + encoder_B.parameters(), lr=lr)
+    gen_optimizer = torch.optim.Adam(list(gen.parameters()) + list(encoder_A.parameters()) + list(encoder_B.parameters()), lr=lr)
     start_time = time.time()
     cur_gen_loss = np.inf
     for batch, (batch_x, batch_y) in tqdm(enumerate(zip(train_x_loader, train_y_loader), start=1)):

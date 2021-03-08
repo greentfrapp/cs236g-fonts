@@ -21,7 +21,7 @@ TRAIN_ID = time.strftime('%Y%m%d_%H%M%S', time.localtime())
 log = util.get_logger('save', 'log_train_'+TRAIN_ID)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(device)
-BATCH_SIZE = 4
+BATCH_SIZE = 1
 LR = 0.001
 EPOCH_SIZE = 1000
 GEN_UPDATES = 10

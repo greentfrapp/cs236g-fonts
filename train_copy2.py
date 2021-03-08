@@ -115,7 +115,7 @@ def train(gen, dis, train_x_loader, train_y_loader, epoch, resize=128, lr=0.001)
     return cur_dis_loss, cur_gen_loss
 
 
-def copy(gen, train_x_loader, train_y_loader, epoch, resize=128, lr=0.001):
+def copy(gen, train_x_loader, train_y_loader, epoch, resize=128, lr=0.001, fixed_z=None):
     gen.train()
     gen.imsize = resize
     gen_losses = []
@@ -129,8 +129,9 @@ def copy(gen, train_x_loader, train_y_loader, epoch, resize=128, lr=0.001):
         real = batch_y['target'].to(device)
 
         # Update Generator
-        z = gen.sample_z(BATCH_SIZE, device=device)
-        z = z.repeat(52, 1)  # shape = (bs*52, z_dim)
+        if fixed_z is None:
+            fixed_z = gen.sample_z(BATCH_SIZE, device=device)
+        z = fixed_z.repeat(52, 1)  # shape = (bs*52, z_dim)
         glyph_one_hot = torch.eye(52).repeat(BATCH_SIZE, 1).to(device)  # shape = (52*bs, 52)
         z = torch.cat([z, glyph_one_hot], dim=1)
             
@@ -245,7 +246,8 @@ if do_copy:
         val_fonts,
         BATCH_SIZE,
         resize=16,
-        logger=log
+        logger=log,
+        fixed_z=gen.sample_z(1, device=device).repeat(BATCH_SIZE, 1)
     )
     epoch = 1
     EPOCH_SIZE = len(train_x_loader)

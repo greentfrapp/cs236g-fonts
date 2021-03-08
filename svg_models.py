@@ -38,7 +38,7 @@ class BaseVectorModel(BaseModel):
 class FontAdjuster(BaseVectorModel):
     def __init__(self, num_strokes=3, n_glyphs=52,
                  zdim=128, width=32, imsize=128,
-                 n_segments=56,
+                 n_segments=28,
                  stroke_width=None):
         super(FontAdjuster, self).__init__()
 

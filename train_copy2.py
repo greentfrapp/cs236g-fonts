@@ -246,12 +246,11 @@ if do_copy:
         val_fonts,
         BATCH_SIZE,
         resize=16,
-        logger=log,
-        fixed_z=gen.sample_z(1, device=device).repeat(BATCH_SIZE, 1)
+        logger=log
     )
     epoch = 1
     EPOCH_SIZE = len(train_x_loader)
-
+    fixed_z = gen.sample_z(1, device=device).repeat(BATCH_SIZE, 1)
     while True:
         gen_loss = copy(
             gen,
@@ -259,7 +258,8 @@ if do_copy:
             train_y_loader,
             epoch,
             resize=16,
-            lr=LR
+            lr=LR,
+            fixed_z=fixed_z
         )
         epoch += 1
         if gen_loss < min_loss:

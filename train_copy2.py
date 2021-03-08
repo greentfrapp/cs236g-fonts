@@ -54,6 +54,8 @@ def copy(gen, encoder_A, encoder_B, train_x_loader, train_y_loader, epoch, resiz
         target = batch_x['target'].to(device)
         real = batch_y['target'].to(device)
 
+        gen_optimizer.zero_grad()
+        
         # Update Generator
         if fixed_z is None:
             # fixed_z = gen.sample_z(BATCH_SIZE, device=device)
@@ -64,7 +66,6 @@ def copy(gen, encoder_A, encoder_B, train_x_loader, train_y_loader, epoch, resiz
         glyph_one_hot = torch.eye(52).repeat(BATCH_SIZE, 1).to(device)  # shape = (52*bs, 52)
         z = torch.cat([z, glyph_one_hot], dim=1)
             
-        gen_optimizer.zero_grad()
         gen_output_t = gen(z)  # shape = (52*bs, resize, resize)
         gen_output_t = gen_output_t.view(-1, 52, resize, resize)
         gen_loss = criterion(gen_output_t, real)

@@ -239,7 +239,6 @@ if args.pretrain:
 do_copy = True
 if do_copy:
     epoch = 1
-    EPOCH_SIZE = len(train_x_loader)
     fixed_z = gen.sample_z(1, device=device).repeat(BATCH_SIZE, 1)
     for resize_factor in range(3, 8):
         min_loss = np.inf
@@ -252,6 +251,7 @@ if do_copy:
             resize=2**resize_factor,
             logger=log
         )
+        EPOCH_SIZE = len(train_x_loader)
         while True:
             gen_loss = copy(
                 gen,

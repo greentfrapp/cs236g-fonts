@@ -238,30 +238,32 @@ if args.pretrain:
 
 do_copy = True
 if do_copy:
-    min_loss = np.inf
-    train_x_loader, train_y_loader, val_loader = get_dataloaders(
-        'data/jpg',
-        'data/jpg',
-        single_fonts,
-        val_fonts,
-        BATCH_SIZE,
-        resize=16,
-        logger=log
-    )
     epoch = 1
     EPOCH_SIZE = len(train_x_loader)
     fixed_z = gen.sample_z(1, device=device).repeat(BATCH_SIZE, 1)
-    while True:
-        gen_loss = copy(
-            gen,
-            train_x_loader,
-            train_y_loader,
-            epoch,
-            resize=16,
-            lr=LR,
-            fixed_z=fixed_z
+    for resize_factor in range(3, 8):
+        min_loss = np.inf
+        train_x_loader, train_y_loader, val_loader = get_dataloaders(
+            'data/jpg',
+            'data/jpg',
+            single_fonts,
+            val_fonts,
+            BATCH_SIZE,
+            resize=2**resize_factor,
+            logger=log
         )
-        epoch += 1
-        if gen_loss < min_loss:
-            save(gen=gen)
-            min_loss = gen_loss
+        while True:
+            gen_loss = copy(
+                gen,
+                train_x_loader,
+                train_y_loader,
+                epoch,
+                resize=2**resize_factor,
+                lr=LR,
+                fixed_z=fixed_z
+            )
+            epoch += 1
+            if gen_loss < min_loss:
+                save(gen=gen)
+                min_loss = gen_loss
+            if gen_loss < 0.05: break

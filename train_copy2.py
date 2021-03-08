@@ -10,8 +10,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 import argparse
 
-from models import Generator, Discriminator
-from svg_models import FontAdjuster
+from models import Generator, Discriminator, ResnetGenerator_3d_conv
+from svg_models import FontAdjuster, FontEncoder
 from glyphs import ALPHABETS
 from dataloader import get_dataloaders
 import util
@@ -21,7 +21,7 @@ TRAIN_ID = time.strftime('%Y%m%d_%H%M%S', time.localtime())
 log = util.get_logger('save', 'log_train_'+TRAIN_ID)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(device)
-BATCH_SIZE = 1
+BATCH_SIZE = 8
 LR = 0.001
 EPOCH_SIZE = 1000
 GEN_UPDATES = 10
@@ -38,8 +38,10 @@ def save(gen=None, dis=None):
         torch.save(dis.state_dict(), str(save_path / 'dis.ckpt'))
 
 
-def copy(gen, train_x_loader, train_y_loader, epoch, resize=128, lr=0.001, fixed_z=None):
+def copy(gen, encoder_A, encoder_B, train_x_loader, train_y_loader, epoch, resize=128, lr=0.001, fixed_z=None):
     gen.train()
+    encoder_A.train()
+    encoder_B.train()
     gen.imsize = resize
     gen_losses = []
     criterion = nn.MSELoss()
@@ -54,7 +56,10 @@ def copy(gen, train_x_loader, train_y_loader, epoch, resize=128, lr=0.001, fixed
 
         # Update Generator
         if fixed_z is None:
-            fixed_z = gen.sample_z(BATCH_SIZE, device=device)
+            # fixed_z = gen.sample_z(BATCH_SIZE, device=device)
+            fixed_z = encoder_A(real.unsqueeze(2))
+            fixed_z = encoder_B(z.squeeze(2))
+            fixed_z = fixed_z.view(-1, 32*8*8)
         z = fixed_z.repeat(52, 1)  # shape = (bs*52, z_dim)
         glyph_one_hot = torch.eye(52).repeat(BATCH_SIZE, 1).to(device)  # shape = (52*bs, 52)
         z = torch.cat([z, glyph_one_hot], dim=1)
@@ -159,6 +164,8 @@ single_fonts = [[f]*100 for f in single_fonts]
 
 # Initialize models
 gen = FontAdjuster().to(device)
+encoder_A = ResnetGenerator_3d_conv(input_nc=52, output_nc=52).to(device)
+encoder_B = ResnetEncoder(input_nc=52, output_nc=52).to(device)
 if args.pretrain:
     print(f"Resuming from {str(Path(args.pretrain) / 'gen.ckpt')}")
     gen.load_state_dict(torch.load(str(Path(args.pretrain) / 'gen.ckpt'), map_location=torch.device('cpu')))
@@ -167,32 +174,34 @@ if args.pretrain:
 do_copy = True
 if do_copy:
     epoch = 1
-    fixed_z = gen.sample_z(1, device=device).repeat(BATCH_SIZE, 1)
+    # fixed_z = gen.sample_z(1, device=device).repeat(BATCH_SIZE, 1)
     resize_factor = 7
-    for font in single_fonts:
-        min_loss = np.inf
-        train_x_loader, train_y_loader, val_loader = get_dataloaders(
-            'data/jpg',
-            'data/jpg',
-            font,
-            val_fonts,
-            BATCH_SIZE,
-            resize=2**resize_factor,
-            logger=log
-        )
-        EPOCH_SIZE = len(train_x_loader)
-        # while True:
-        gen_loss = copy(
-            gen,
-            train_x_loader,
-            train_y_loader,
-            epoch,
-            resize=2**resize_factor,
-            lr=LR,
-            fixed_z=fixed_z
-        )
-        epoch += 1
-        # if gen_loss < min_loss:
-        #     save(gen=gen)
-        #     min_loss = gen_loss
-        # if gen_loss < 0.1: break
+    # for font in single_fonts:
+    min_loss = np.inf
+    train_x_loader, train_y_loader, val_loader = get_dataloaders(
+        'data/jpg',
+        'data/jpg',
+        train_fonts,
+        val_fonts,
+        BATCH_SIZE,
+        resize=2**resize_factor,
+        logger=log
+    )
+    EPOCH_SIZE = len(train_x_loader)
+    # while True:
+    gen_loss = copy(
+        gen,
+        encoder_A,
+        encoder_B,
+        train_x_loader,
+        train_y_loader,
+        epoch,
+        resize=2**resize_factor,
+        lr=LR,
+        # fixed_z=fixed_z
+    )
+    epoch += 1
+    # if gen_loss < min_loss:
+    #     save(gen=gen)
+    #     min_loss = gen_loss
+    # if gen_loss < 0.1: break

@@ -35,6 +35,28 @@ class BaseVectorModel(BaseModel):
         return self._forward(z)[0]
 
 
+class FontEncoder(nn.Module):
+    def __init__(self, input_nc=52, output_nc=52, ngf=2, norm_layer=nn.BatchNorm2d, use_dropout=False, n_blocks=6, norm_type='batch'):
+        assert(n_blocks >= 0)
+        super(ResnetEncoder, self).__init__()
+        self.input_nc = input_nc
+        self.output_nc = output_nc
+        self.ngf = ngf
+        model = conv_norm_relu_module(norm_type, norm_layer, input_nc, ngf, 7, 3) 
+        n_downsampling = 4
+        for i in range(n_downsampling):
+            factor_ch = 2 #2**i : 3**i is a more complicated filter
+            mult = factor_ch**i 
+            model += conv_norm_relu_module(norm_type,norm_layer, ngf * mult, ngf * mult * factor_ch, 3,1, stride=2)
+        mult = factor_ch**n_downsampling
+        for i in range(n_blocks):
+            model += [ResnetBlock(ngf * mult, 'zero', norm_layer=norm_layer, use_dropout=use_dropout, norm_type=norm_type)]
+        self.model = nn.Sequential(*model)
+
+    def forward(self, input):  
+        return self.model(input) 
+
+
 class FontAdjuster(BaseVectorModel):
     def __init__(self, num_strokes=3, n_glyphs=52,
                  zdim=128, width=32, imsize=128,

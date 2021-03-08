@@ -23,7 +23,7 @@ def weights_init(m):
 class FontEncoder(nn.Module):
     def __init__(self, input_nc=52, output_nc=52, ngf=2, norm_layer=nn.BatchNorm2d, use_dropout=False, n_blocks=6, norm_type='batch'):
         assert(n_blocks >= 0)
-        super(ResnetEncoder, self).__init__()
+        super(FontEncoder, self).__init__()
         self.input_nc = input_nc
         self.output_nc = output_nc
         self.ngf = ngf

@@ -38,83 +38,6 @@ def save(gen=None, dis=None):
         torch.save(dis.state_dict(), str(save_path / 'dis.ckpt'))
 
 
-def train(gen, dis, train_x_loader, train_y_loader, epoch, resize=128, lr=0.001):
-    gen.train()
-    dis.train()
-    gen.imsize = resize
-    dis_losses = []
-    gen_losses = []
-    criterion = nn.BCELoss()
-    dis_optimizer = torch.optim.Adam(dis.parameters(), lr=0.00001)
-    gen_optimizer = torch.optim.Adam(gen.parameters(), lr=lr)
-    start_time = time.time()
-    for batch, (batch_x, batch_y) in tqdm(enumerate(zip(train_x_loader, train_y_loader), start=1)):
-
-        source = batch_x['source'].to(device)
-        target = batch_x['target'].to(device)
-        real = batch_y['target'].to(device)
-
-        # Update Generator
-        for i in range(GEN_UPDATES):
-            z = gen.sample_z(BATCH_SIZE, device=device)
-            z = z.repeat(52, 1)  # shape = (bs*52, z_dim)
-            glyph_one_hot = torch.eye(52).repeat(BATCH_SIZE, 1).to(device)  # shape = (52*bs, 52)
-            z = torch.cat([z, glyph_one_hot], dim=1)
-            
-            gen_optimizer.zero_grad()
-            gen_output_t = gen(z)  # shape = (52*bs, resize, resize)
-            gen_output_t = gen_output_t.view(-1, 52, resize, resize)
-            dis_output_fake_t = dis(F.interpolate(gen_output_t, 128))
-            gen_loss = torch.mean(dis_output_fake_t ** 2)
-            gen_loss.backward()
-            gen_optimizer.step()
-
-        # Update Discriminator
-        for i in range(DIS_UPDATES):
-            z = gen.sample_z(BATCH_SIZE, device=device)
-            z = z.repeat(52, 1)  # shape = (bs*52, z_dim)
-            glyph_one_hot = torch.eye(52).repeat(BATCH_SIZE, 1).to(device)  # shape = (52*bs, 52)
-            z = torch.cat([z, glyph_one_hot], dim=1)
-            
-            dis_optimizer.zero_grad()
-            gen_output_t = gen(z)  # shape = (52*bs, resize, resize)
-            gen_output_t = gen_output_t.view(-1, 52, resize, resize)
-            gen_output_t = F.interpolate(gen_output_t.detach(), 128)
-            real = F.interpolate(real, 128)
-            dis_output_fake_t = dis(gen_output_t)
-            dis_output_real_t = dis(real)
-            dis_loss = 0.5 * torch.mean((1 - dis_output_fake_t) ** 2) + 0.5 * torch.mean(dis_output_real_t ** 2)
-            dis_loss.backward()
-            dis_optimizer.step()
-            
-        dis_losses.append(dis_loss.item())
-        gen_losses.append(gen_loss.item())
-        log_interval = 50
-        display_interval = 50
-        if (batch % log_interval == 0 or batch == EPOCH_SIZE):
-            cur_dis_loss = np.mean(dis_losses)
-            cur_gen_loss = np.mean(gen_losses)
-            elapsed = time.time() - start_time
-            log.info('| epoch {:3d} | {:5d}/{:5d} batches | '
-                  'lr {:02.2f} | ms/batch {:5.2f} | '
-                  'loss {:5.2f}/{:5.2f}'.format(
-                    epoch, batch, EPOCH_SIZE, LR,
-                    elapsed * 1000 / log_interval,
-                    cur_dis_loss, cur_gen_loss))
-            dis_losses = []
-            gen_losses = []
-            start_time = time.time()
-        
-        if (batch % display_interval == 0 or batch == EPOCH_SIZE):
-            Path(f'images/train/{TRAIN_ID}/').mkdir(parents=True, exist_ok=True)
-            for i in range(len(source)):
-                # util.save_image_grid(f'images/train/{TRAIN_ID}/epoch{epoch}_source_{i}.jpg', source[i, :, :, :].detach().cpu().numpy()*255)
-                # util.save_image_grid(f'images/train/{TRAIN_ID}/epoch{epoch}_target_{i}.jpg', target[i, :, :, :].detach().cpu().numpy()*255)
-                util.save_image_grid(f'images/train/{TRAIN_ID}/epoch{epoch}_batch{batch}_fake_{i}.jpg', gen_output_t[i, :, :, :].detach().cpu().numpy()*255)
-                util.save_image_grid(f'images/train/{TRAIN_ID}/epoch{epoch}_batch{batch}_real_{i}.jpg', real[i, :, :, :].detach().cpu().numpy()*255)
-    return cur_dis_loss, cur_gen_loss
-
-
 def copy(gen, train_x_loader, train_y_loader, epoch, resize=128, lr=0.001, fixed_z=None):
     gen.train()
     gen.imsize = resize
@@ -240,7 +163,7 @@ do_copy = True
 if do_copy:
     epoch = 1
     fixed_z = gen.sample_z(1, device=device).repeat(BATCH_SIZE, 1)
-    for resize_factor in range(3, 8):
+    for resize_factor in range(4, 8):
         min_loss = np.inf
         train_x_loader, train_y_loader, val_loader = get_dataloaders(
             'data/jpg',

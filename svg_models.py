@@ -3,7 +3,8 @@
 import torch as th
 
 import rendering
-from templates import ALPHABETS_TEMPLATE
+from templates import ALPHABETS_TEMPLATE, MASKS
+
 
 # LOG = ttools.get_logger(__name__)
 
@@ -76,6 +77,7 @@ class FontAdjuster(BaseVectorModel):
 
         self.register_buffer('all_widths', th.tensor([[0] * self.num_strokes]))
         self.register_buffer('template', ALPHABETS_TEMPLATE)
+        self.register_buffer('mask', MASKS)
 
     def _forward(self, z):
         device = th.device("cuda" if th.cuda.is_available() else "cpu")
@@ -92,7 +94,7 @@ class FontAdjuster(BaseVectorModel):
 
         all_widths = self.all_widths.repeat(bs * self.n_glyphs, 1)
 
-        all_points = self.template.repeat(bs, 1, 1, 1, 1) + all_points_d
+        all_points = self.template.repeat(bs, 1, 1, 1, 1) + all_points_d * self.mask.repeat(bs, 1, 1, 1, 1)
         all_points = th.clamp(all_points, -1, 1)
         all_points = all_points.view(
             bs * self.n_glyphs,

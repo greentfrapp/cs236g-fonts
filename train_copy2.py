@@ -190,20 +190,20 @@ if do_copy:
         logger=log
     )
     EPOCH_SIZE = len(train_x_loader)
-    # while True:
-    gen_loss = copy(
-        gen,
-        encoder_A,
-        encoder_B,
-        train_x_loader,
-        train_y_loader,
-        epoch,
-        resize=2**resize_factor,
-        lr=LR,
-        # fixed_z=fixed_z
-    )
-    epoch += 1
-    # if gen_loss < min_loss:
-    #     save(gen=gen)
-    #     min_loss = gen_loss
-    # if gen_loss < 0.1: break
+    while True:
+        gen_loss = copy(
+            gen,
+            encoder_A,
+            encoder_B,
+            train_x_loader,
+            train_y_loader,
+            epoch,
+            resize=2**resize_factor,
+            lr=LR,
+            # fixed_z=fixed_z
+        )
+        epoch += 1
+        if gen_loss < min_loss:
+            save(gen=gen)
+            min_loss = gen_loss
+        # if gen_loss < 0.01: break

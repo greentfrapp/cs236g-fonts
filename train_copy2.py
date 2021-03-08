@@ -61,8 +61,9 @@ def copy(gen, encoder_A, encoder_B, train_x_loader, train_y_loader, epoch, resiz
         # fixed_z = gen.sample_z(BATCH_SIZE, device=device)
         fixed_z = encoder_A(real.unsqueeze(2))
         fixed_z = encoder_B(fixed_z.squeeze(2))
-        fixed_z = fixed_z.view(-1, 32*8*8)
-        z = fixed_z.repeat(52, 1)  # shape = (bs*52, z_dim)
+        fixed_z = fixed_z.view(-1, 1, 32*8*8)
+        z = fixed_z.repeat(1, 52, 1)  # shape = (bs*52, z_dim)
+        z = z.view(-1, 32*8*8)
         glyph_one_hot = torch.eye(52).repeat(BATCH_SIZE, 1).to(device)  # shape = (52*bs, 52)
         z = torch.cat([z, glyph_one_hot], dim=1)
             

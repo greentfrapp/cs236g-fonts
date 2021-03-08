@@ -65,6 +65,7 @@ def copy(gen, encoder_A, encoder_B, train_x_loader, train_y_loader, epoch, resiz
         # fixed_z = gen.sample_z(BATCH_SIZE, device=device)
         fixed_z = encoder_A(real.unsqueeze(2))
         fixed_z = encoder_B(fixed_z.squeeze(2))
+        print(fixed_z.shape)
         fixed_z = fixed_z.view(-1, 1, 32*8*8)
         z = fixed_z.repeat(1, 52, 1)  # shape = (bs*52, z_dim)
         z = z.view(-1, 32*8*8)

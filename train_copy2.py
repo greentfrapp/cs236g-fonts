@@ -22,7 +22,7 @@ log = util.get_logger('save', 'log_train_'+TRAIN_ID)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(device)
 BATCH_SIZE = 8
-LR = 0.001
+LR = 0.0001
 EPOCH_SIZE = 1000
 GEN_UPDATES = 10
 DIS_UPDATES = 1

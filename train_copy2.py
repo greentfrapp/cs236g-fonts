@@ -71,6 +71,7 @@ def copy(gen, encoder_A, encoder_B, train_x_loader, train_y_loader, epoch, resiz
         z = z.view(-1, z_dim_size)
         glyph_one_hot = torch.eye(52).repeat(fixed_z.shape[0], 1).to(device)  # shape = (52*bs, 52)
         z = torch.cat([z, glyph_one_hot], dim=1)
+        print(z.shape)
             
         gen_output_t = gen(z)  # shape = (52*bs, resize, resize)
         gen_output_t = gen_output_t.view(-1, 52, resize, resize)

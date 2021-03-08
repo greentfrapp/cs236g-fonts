@@ -94,7 +94,7 @@ class FontAdjuster(BaseVectorModel):
 
         all_widths = self.all_widths.repeat(bs * self.n_glyphs, 1)
 
-        all_points = self.template.repeat(bs, 1, 1, 1, 1) + all_points_d * self.mask.repeat(bs, 1, 1, 1, 1)
+        all_points = self.template.repeat(bs, 1, 1, 1, 1) + all_points_d * self.mask.repeat(bs, 1, 1, 1, 1) * 0.2
         all_points = th.clamp(all_points, -1, 1)
         all_points = all_points.view(
             bs * self.n_glyphs,

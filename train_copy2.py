@@ -154,6 +154,9 @@ with open('single_font2.txt', 'r') as file:
     for font in file:
         single_fonts.append(font.strip())
 
+single_fonts = train_fonts[:100]
+single_fonts = [[f]*100 for f in single_fonts]
+
 # Initialize models
 gen = FontAdjuster().to(device)
 if args.pretrain:
@@ -165,30 +168,31 @@ do_copy = True
 if do_copy:
     epoch = 1
     fixed_z = gen.sample_z(1, device=device).repeat(BATCH_SIZE, 1)
-    for resize_factor in [7]:
+    resize_factor = 7
+    for font in single_fonts:
         min_loss = np.inf
         train_x_loader, train_y_loader, val_loader = get_dataloaders(
             'data/jpg',
             'data/jpg',
-            single_fonts,
+            font,
             val_fonts,
             BATCH_SIZE,
             resize=2**resize_factor,
             logger=log
         )
         EPOCH_SIZE = len(train_x_loader)
-        while True:
-            gen_loss = copy(
-                gen,
-                train_x_loader,
-                train_y_loader,
-                epoch,
-                resize=2**resize_factor,
-                lr=LR,
-                fixed_z=fixed_z
-            )
-            epoch += 1
-            if gen_loss < min_loss:
-                save(gen=gen)
-                min_loss = gen_loss
-            if gen_loss < 0.01: break
+        # while True:
+        gen_loss = copy(
+            gen,
+            train_x_loader,
+            train_y_loader,
+            epoch,
+            resize=2**resize_factor,
+            lr=LR,
+            fixed_z=fixed_z
+        )
+        epoch += 1
+        # if gen_loss < min_loss:
+        #     save(gen=gen)
+        #     min_loss = gen_loss
+        # if gen_loss < 0.1: break

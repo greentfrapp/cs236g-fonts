@@ -204,7 +204,7 @@ if do_copy:
             train_y_loader,
             epoch,
             resize=2**resize_factor,
-            lr=LR * 0.8**(epoch-1),
+            lr=LR,# * 0.8**(epoch-1),
             # fixed_z=fixed_z
         )
         epoch += 1

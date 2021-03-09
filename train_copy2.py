@@ -170,7 +170,7 @@ single_fonts = train_fonts[:100]
 single_fonts = [[f]*100 for f in single_fonts]
 
 # Initialize models
-gen = FontAdjuster(zdim=32*4*4).to(device)
+gen = FontAdjuster(zdim=32*8*8).to(device)
 encoder_A = ResnetGenerator_3d_conv(input_nc=52, output_nc=52).to(device)
 encoder_B = FontEncoder(input_nc=52, output_nc=52).to(device)
 if args.pretrain:
@@ -182,7 +182,7 @@ do_copy = True
 if do_copy:
     epoch = 1
     # fixed_z = gen.sample_z(1, device=device).repeat(BATCH_SIZE, 1)
-    resize_factor = 6
+    resize_factor = 7
     # for font in single_fonts:
     min_loss = np.inf
     train_x_loader, train_y_loader, val_loader = get_dataloaders(

@@ -24,6 +24,16 @@ LR = 0.001
 EPOCH_SIZE = 1000
 
 
+def save(gen=None, dis=None):
+    save_path = Path('save') / ('models_'+TRAIN_ID)
+    save_path.mkdir(parents=True, exist_ok=True)
+    log.info(f'Saving models to {str(save_path)}...')
+    if gen:
+        torch.save(gen.state_dict(), str(save_path / 'gen.ckpt'))
+    if dis:
+        torch.save(dis.state_dict(), str(save_path / 'dis.ckpt'))
+
+
 def train(gen, dis, train_x_loader, train_y_loader, epoch, lr=0.001):
     gen.train()
     dis.train()
@@ -144,9 +154,12 @@ dis = Discriminator().to(device)
 epoch = 1
 EPOCH_SIZE = len(train_x_loader)
 
+min_eval_loss = np.inf
 while True:
     train(gen, dis, train_x_loader, train_y_loader, epoch, lr=LR)
-    if epoch % 10 == 0:
-        eval_loss = eval(gen, val_loader, epoch)
-        log.info(f'Eval Pixelwise BCE Loss: {eval_loss}')
+    eval_loss = eval(gen, val_loader, epoch)
+    log.info(f'Eval Pixelwise BCE Loss: {eval_loss}')
+    if eval_loss < min_eval_loss:
+        eval_loss = min_eval_loss
+        save(gen, dis)
     epoch += 1

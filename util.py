@@ -3,6 +3,7 @@ import os
 from tqdm import tqdm
 import numpy as np
 from PIL import Image
+from glyphs import ALPHABETS
 
 
 def save_image_grid(path, np_array, n_cols=None):
@@ -13,6 +14,28 @@ def save_image_grid(path, np_array, n_cols=None):
     rows = [np.concatenate(row, axis=1) for row in np.split(np_array, n_cols)]
     grid = np.concatenate(rows)
     Image.fromarray(grid).convert("RGB").save(path)
+
+
+def save_message(path, np_array, n_cols=None):
+    n_imgs, h, w = np_array.shape
+    message = [
+        ['F_', 'u', 'n',],
+        ['W_', 'i', 't', 'h',],
+        ['G_', 'A_', 'N_', 's'],
+    ]
+    max_len = max([len(word) for word in message])
+
+    message_img = []
+    for word in message:
+        word_img = []
+        for t in word:
+            word_img.append(np_array[ALPHABETS.index(t)])
+        while len(word_img) < max_len:
+            word_img.append(np.zeros((h, w)))
+        word_img = np.concatenate(word_img, axis=1)
+        message_img.append(word_img)
+    message_img = np.concatenate(message_img)
+    Image.fromarray(message_img).convert("RGB").save(path)
 
 
 def get_logger(log_dir, name):

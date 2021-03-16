@@ -9,6 +9,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import argparse
+import pydiffvg
 
 from models import Generator, Discriminator, ResnetGenerator_3d_conv, FontEncoder
 from svg_models import FontAdjuster
@@ -105,6 +106,50 @@ def copy(gen, encoder_A, encoder_B, train_x_loader, train_y_loader, epoch, resiz
     return cur_gen_loss
 
 
+def sample(gen, encoder_A, encoder_B, train_x_loader, train_y_loader, resize=128, svg=False):
+    gen.eval()
+    encoder_A.eval()
+    encoder_B.eval()
+    gen.imsize = resize
+    for batch, (batch_x, batch_y) in tqdm(enumerate(zip(train_x_loader, train_y_loader), start=1)):
+
+        source = batch_x['source'].to(device)
+        target = batch_x['target'].to(device)
+        real = batch_y['target'].to(device)
+
+        # Generate encoding
+        fixed_z = encoder_A(real.unsqueeze(2))
+        fixed_z = encoder_B(fixed_z.squeeze(2))
+        z_dim_size = fixed_z.shape[1] * fixed_z.shape[2] * fixed_z.shape[3]
+        fixed_z = fixed_z.view(-1, 1, z_dim_size)
+        z = fixed_z.repeat(1, 52, 1)  # shape = (bs*52, z_dim)
+        z = z.view(-1, z_dim_size)
+        glyph_one_hot = torch.eye(52).repeat(fixed_z.shape[0], 1).to(device)  # shape = (52*bs, 52)
+        z = torch.cat([z, glyph_one_hot], dim=1)
+
+        # new_z = []
+        # for i, noise_v in enumerate(z):
+        #     new_z.append(0.5 * z[i] + 0.5 * z[-i])
+        # z = torch.stack(new_z)
+
+        # Decode
+        if svg:
+            scenes = gen.get_vector(z)
+            for i, scene in enumerate(scenes):
+                pydiffvg.save_svg(f'svg/{i}.svg', *scene)
+                if i == 30:
+                    break
+
+        # else:
+        gen_output_t = gen(z)  # shape = (52*bs, resize, resize)
+        gen_output_t = gen_output_t.view(-1, 52, resize, resize)
+            
+        for i in range(len(source)):
+            util.save_image_grid(f'svg/real_{i}.jpg', real[i, :, :, :].detach().cpu().numpy()*255)
+            util.save_image_grid(f'svg/fake_{i}.jpg', gen_output_t[i, :, :, :].detach().cpu().numpy()*255)
+        break
+
+
 def eval(gen, val_loader, epoch):
     Path(f'images/eval/{TRAIN_ID}/').mkdir(parents=True, exist_ok=True)
     log.info("Evaluating...")
@@ -150,6 +195,9 @@ def interpolate():
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--pretrain', type=str, default=None)
+parser.add_argument('--sample',  action="store_true", default=False)
+parser.add_argument('--svg',  action="store_true", default=False)
+parser.add_argument('--copy',  action="store_true", default=False)
 args = parser.parse_args()
 
 # Get DataLoaders
@@ -176,10 +224,10 @@ encoder_B = FontEncoder(input_nc=52, output_nc=52).to(device)
 if args.pretrain:
     print(f"Resuming from {str(Path(args.pretrain) / 'gen.ckpt')}")
     gen.load_state_dict(torch.load(str(Path(args.pretrain) / 'gen.ckpt'), map_location=torch.device('cpu')))
-# dis = Discriminator(ndf=4, n_layers=2).to(device)
-
-do_copy = True
-if do_copy:
+    encoder_A.load_state_dict(torch.load(str(Path(args.pretrain) / 'enc_A.ckpt'), map_location=torch.device('cpu')))
+    encoder_B.load_state_dict(torch.load(str(Path(args.pretrain) / 'enc_B.ckpt'), map_location=torch.device('cpu')))
+    
+if args.copy:
     epoch = 1
     # fixed_z = gen.sample_z(1, device=device).repeat(BATCH_SIZE, 1)
     resize_factor = 7
@@ -212,3 +260,30 @@ if do_copy:
             save(gen=gen, encoder_A=encoder_A, encoder_B=encoder_B)
             min_loss = gen_loss
         # if gen_loss < 0.01: break
+
+elif args.sample:
+    resize_factor = 8
+    # for font in single_fonts:
+    min_loss = np.inf
+    train_x_loader, train_y_loader, val_loader = get_dataloaders(
+        'data/jpg',
+        'data/jpg',
+        [
+            'Alegreya-Black',
+            'BadScript-Regular',
+            'Baskervville-Italic',
+        ],
+        val_fonts,
+        BATCH_SIZE,
+        resize=2**resize_factor,
+        logger=log
+    )
+    sample(
+        gen,
+        encoder_A,
+        encoder_B,
+        train_x_loader,
+        train_y_loader,
+        resize=2**resize_factor,
+        svg=args.svg
+    )   

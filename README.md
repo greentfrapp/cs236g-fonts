@@ -1,6 +1,8 @@
 # cs236g-fonts
 Final project for CS236G Winter 2021
 
+![Samples](https://raw.githubusercontent.com/greentfrapp/cs236g-fonts/main/sample.gif)
+
 ## Dataset
 
 The dataset used in this project will be based on the Google Fonts dataset.

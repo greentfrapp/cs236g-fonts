@@ -15,13 +15,13 @@ from dataloader import get_dataloaders
 import util
 
 
-TRAIN_ID = time.strftime('%Y%m%d_%H%M%S', time.localtime())
+TRAIN_ID = time.strftime('%Y%m%d_%H%M%S_GAN', time.localtime())
 log = util.get_logger('save', 'log_train_'+TRAIN_ID)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(device)
 BATCH_SIZE = 16
 LR = 0.001
-EPOCH_SIZE = 1000
+MAX_EPOCHS = 300
 
 
 def save(gen=None, dis=None):
@@ -72,21 +72,21 @@ def train(gen, dis, train_x_loader, train_y_loader, epoch, lr=0.001):
         gen_losses.append(gen_loss.item())
         log_interval = 50
         display_interval = 500
-        if (batch % log_interval == 0 or batch == EPOCH_SIZE):
+        if (batch % log_interval == 0 or batch == len(train_x_loader)):
             cur_dis_loss = np.mean(dis_losses)
             cur_gen_loss = np.mean(gen_losses)
             elapsed = time.time() - start_time
             log.info('| epoch {:3d} | {:5d}/{:5d} batches | '
                   'lr {:02.2f} | ms/batch {:5.2f} | '
                   'loss {:5.2f}/{:5.2f}'.format(
-                    epoch, batch, EPOCH_SIZE, LR,
+                    epoch, batch, len(train_x_loader), LR,
                     elapsed * 1000 / log_interval,
                     cur_dis_loss, cur_gen_loss))
             dis_losses = []
             gen_losses = []
             start_time = time.time()
         
-        if (batch % display_interval == 0 or batch == EPOCH_SIZE) and epoch % 10 == 0:
+        if (batch % display_interval == 0 or batch == len(train_x_loader)) and epoch % 10 == 0:
             Path(f'images/train/{TRAIN_ID}/').mkdir(parents=True, exist_ok=True)
             for i in range(len(source)):
                 util.save_image_grid(f'images/train/{TRAIN_ID}/epoch{epoch}_source_{i}.jpg', source[i, :, :, :].detach().cpu().numpy()*255)
@@ -138,28 +138,32 @@ def interpolate():
     return gen_output_t
 
 
-# Get DataLoaders
-train_fonts = []
-with open('train52_fonts.txt', 'r') as file:
-    for font in file:
-        train_fonts.append(font.strip())
-val_fonts = []
-with open('val52_fonts.txt', 'r') as file:
-    for font in file:
-        val_fonts.append(font.strip())
-train_x_loader, train_y_loader, val_loader = get_dataloaders('data/jpg', 'data/jpg', train_fonts, val_fonts, BATCH_SIZE, logger=log)
-# Initialize models
-gen = Generator().to(device)
-dis = Discriminator().to(device)
-epoch = 1
-EPOCH_SIZE = len(train_x_loader)
+def main():
+    # Get DataLoaders
+    train_fonts = []
+    with open('train52_fonts.txt', 'r') as file:
+        for font in file:
+            train_fonts.append(font.strip())
+    val_fonts = []
+    with open('val52_fonts.txt', 'r') as file:
+        for font in file:
+            val_fonts.append(font.strip())
+    train_x_loader, train_y_loader, val_loader = get_dataloaders('data/jpg', 'data/jpg', train_fonts, val_fonts, BATCH_SIZE, logger=log)
+    # Initialize models
+    gen = Generator().to(device)
+    dis = Discriminator().to(device)
+    epoch = 1
 
-min_eval_loss = np.inf
-while True:
-    train(gen, dis, train_x_loader, train_y_loader, epoch, lr=LR)
-    eval_loss = eval(gen, val_loader, epoch)
-    log.info(f'Eval Pixelwise BCE Loss: {eval_loss}')
-    if eval_loss < min_eval_loss:
-        eval_loss = min_eval_loss
-        save(gen, dis)
-    epoch += 1
+    min_eval_loss = np.inf
+    while epoch <= MAX_EPOCHS:
+        train(gen, dis, train_x_loader, train_y_loader, epoch, lr=LR)
+        eval_loss = eval(gen, val_loader, epoch)
+        log.info(f'Eval Pixelwise BCE Loss: {eval_loss}')
+        if eval_loss < min_eval_loss:
+            eval_loss = min_eval_loss
+            save(gen, dis)
+        epoch += 1
+
+
+if __name__ == '__main__':
+    main()
